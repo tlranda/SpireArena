@@ -5,6 +5,8 @@ from argparse import ArgumentParser as AP
 # Possible Dependencies
 import numpy as np
 
+num_groups = 0
+
 def build():
 	prs = AP()
 	prs.add_argument('-group', type=str, default=[], nargs="+", action="append", help="Filenames defining monster groups to fight")
@@ -19,8 +21,24 @@ def parse(prs, args=None):
 	args.group = list(np.asarray(args.group).flatten())
 	return args
 
-def MakeMonsterGroupFromFile(fh, battlefield):
-	monsterGroup = arena.MonsterGroup([])
+def MakeMonsterFromString(string, battlefield=None, monsterGroup=None):
+	line = string.rstrip().split()
+	print(line)
+	monsterType = line[0]
+	monsterMaker = {'ID': line[1],
+					'Arena': battlefield,
+					'Friendlies': monsterGroup
+					}
+	monsterMaker.update(dict((k,v) for k,v in zip(line[2::2], line[3::2])))
+	print(monsterMaker)
+	return monsters.makeMonster(monsterType, **monsterMaker)
+
+def MakeMonsterGroupFromFile(fh, battlefield, ID=None):
+	if ID is None:
+		global num_groups
+		ID = str(num_groups)
+		num_groups += 1
+	monsterGroup = arena.MonsterGroup([], ID=ID)
 	for line in fh.readlines():
 		"""
 			File format:
@@ -31,17 +49,7 @@ def MakeMonsterGroupFromFile(fh, battlefield):
 				Beyond that should be pairs of elements such that the first is the keyword and the second is the value
 					Class Constructors are required to properly convert strings to the intended data type for such inputs
 		"""
-		line = line.rstrip().split()
-		print(line)
-		monsterType = line[0]
-		monsterMaker = {'ID': line[1],
-						'Arena': battlefield,
-						'Friendlies': monsterGroup
-						}
-		monsterMaker.update(dict((k,v) for k,v in zip(line[2::2], line[3::2])))
-		print(monsterMaker)
-		monster = monsters.makeMonster(monsterType, **monsterMaker)
-		monsterGroup.AddMonster(monster, ephemeral=False)
+		monsterGroup.AddMonster(MakeMonsterFromString(line, battlefield, monsterGroup), ephemeral=False)
 	battlefield.AddGroup(monsterGroup)
 
 """

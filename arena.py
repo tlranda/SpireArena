@@ -203,19 +203,22 @@ class Monster():
 		for power in self.PowerPool:
 			for trigger in power.triggers:
 				if trigger in trigger_classes:
+					print(f"Trigger power {power}")
 					powerQueue.append(power)
 					break
 		# Sort powerQueue by priority
 		powerQueue = sorted(powerQueue, key=lambda x: x.priority, reverse=True)
 		# Activate powers
 		for power in powerQueue:
-			value = power.Affect(value, source_class, source, target)
+			new_value = power.Affect(value, source_class, source, target)
+			print(f"{power} updates value from {value} to {new_value}")
+			value = new_value
 		return value
 
 	def Select(self, ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True):
 		# Get all the candidate groups
-		arenaGroups = [[val for val in self.arena.Affect(self.Friendlies, Self=ArenaSelf, All=ArenaAll)] for _ in range(ArenaTargets)]
+		arenaGroups = [[val for val in self.Arena.Affect(self.Friendlies, IncludeSelf=ArenaSelf, All=ArenaAll)] for _ in range(ArenaTargets)]
 		# Determine number of targets to pick
 		maxTargeted = sum([_[0] for _ in arenaGroups])
 		if ArenaTargets is not None:
@@ -261,7 +264,9 @@ class Monster():
 		targets = self.Select(ArenaTargets=ArenaTargets, ArenaSelf=ArenaSelf, ArenaAll=ArenaAll,
 				GroupTargets=GroupTargets, GroupOnlySelf=GroupOnlySelf, GroupIncludeSelf=GroupIncludeSelf, GroupAll=GroupAll, GroupCheckAlive=GroupCheckAlive)
 		# Iteratively perform damage
+		dealt = []
 		for damage in amounts:
+			dealt.append(0)
 			# Can stop multiattacks early etc if die during the effect
 			if self.Alive:
 				for target in targets:
@@ -285,6 +290,7 @@ class Monster():
 					damage = max(0, damage)
 					target_was_alive = target.Alive
 					target.Health -= damage
+					dealt[-1] += damage
 					# Now call post damage powers
 					Powers = [[POWER.AFTER_ATTACK],[POWER.AFTER_ATTACK_ED]]
 					if damage > 0:
@@ -293,8 +299,10 @@ class Monster():
 					if target_was_alive and not target.Alive:
 						Powers[0].append(POWER.ON_KILL)
 						Powers[1].append(POWER.ON_DEATH)
-					self.empower(damage, affectClass, Powers[0], self, target)
-					target.empower(damage, affectClass, Powers[1], self, target)
+					self.Empower(damage, affectClass, Powers[0], source=self, target=target)
+					target.Empower(damage, affectClass, Powers[1], source=self, target=target)
+		# Return damage dealt for logging
+		return dealt, targets
 
 """
 #2 MonsterGroup (Instanceable)
@@ -312,11 +320,15 @@ class Monster():
 		* Affect(Monster, OnlySelf, IncludeSelf, All, CheckAlive) : Generator over the group's monsters. If OnlySelf, only yields the Monster if found in the group. IncludeSelf and All work as in the Arena class's Affect(). CheckAlive means the monster needs to respond as alive to be included.
 """
 class MonsterGroup():
-	def __init__(self, monsters=[]):
+	def __init__(self, monsters=[], ID="<TemplateGroup>"):
 		print(f"Making monster group out of {monsters}")
 		self.monsters = monsters
+		self.ID = ID
 		self.ephemeral = [False for _ in monsters]
 		self.fight_on = len(monsters)
+
+	def __str__(self):
+		return f"{self.ID} with monsters: {[str(monster) for monster in self.monsters]}"
 
 	def AddMonster(self, monster, ephemeral=True):
 		print(f"Monster Group is adding monster {monster}")
