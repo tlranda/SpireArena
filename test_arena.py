@@ -9,7 +9,9 @@ num_groups = 0
 
 def build():
 	prs = AP()
-	prs.add_argument('-group', type=str, default=[], nargs="+", action="append", help="Filenames defining monster groups to fight")
+	prs.add_argument('-group', type=str, default=[], nargs="+", action="append", required=True, help="Filenames defining monster groups to fight")
+	prs.add_argument('-seed', type=int, default=None, help="Set global RNG seed (default not set--psuedorandom)")
+	prs.add_argument('-max-turns', type=int, default=None, help="Limit turns in each brawl (default None)")
 	return prs
 
 def parse(prs, args=None):
@@ -36,7 +38,7 @@ def MakeMonsterGroupFromFile(fh, battlefield, ID=None):
 		global num_groups
 		ID = f"Group_{num_groups}"
 		num_groups += 1
-	monsterGroup = arena.MonsterGroup([], ID=ID)
+	monsterGroup = arena.MonsterGroup(monsters=[], ID=ID)
 	for line in fh.readlines():
 		"""
 			File format:
@@ -48,7 +50,7 @@ def MakeMonsterGroupFromFile(fh, battlefield, ID=None):
 					Class Constructors are required to properly convert strings to the intended data type for such inputs
 		"""
 		monsterGroup.AddMonster(MakeMonsterFromString(line, battlefield, monsterGroup), ephemeral=False)
-	battlefield.AddGroup(monsterGroup)
+	battlefield.AddGroups(monsterGroup)
 
 """
 	Then basically want a statistician class to take an Arena and fight it # times, tracking which group is winning and make nice outputs based on that
@@ -57,10 +59,13 @@ def MakeMonsterGroupFromFile(fh, battlefield, ID=None):
 
 if __name__ == '__main__':
 	args = parse(build())
+	# Set seed as necssary
+	if args.seed is not None:
+		arena.global_rng.seed(args.seed)
 	# Make groups
-	colliseum = arena.Arena()
+	colliseum = arena.Arena(ID="SpireArena")
 	for combat_group in args.group:
 		with open(combat_group, 'r') as f:
 			MakeMonsterGroupFromFile(f, colliseum)
-	winner = colliseum.Brawl()
+	winner = colliseum.Brawl(args.max_turns)
 

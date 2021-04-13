@@ -1,4 +1,4 @@
-import arena
+import arena, powers
 
 def objects():
 	return {"AcidSlime": AcidSlime}
@@ -36,7 +36,9 @@ class AcidSlime(arena.Monster):
 			self.MaxHealth = self.rng.randint(8,12)
 			self.AscendMaxHealth = 1
 		# Moves
-		self.Abilities = [self.Corrosive_Spit, self.Tackle, self.Lick]
+		self.makeMoves((powers.SOURCE.ATTACK, self.Corrosive_Spit, f"{str(self)} spits"),
+						(powers.SOURCE.ATTACK, self.Tackle, f"{str(self)} tackles"),
+						(powers.SOURCE.SKILL, self.Lick, f"{str(self)} licks"))
 		if self.Size == 'S':
 			self.Pattern = [0, 0.5, 0.5]
 		else:
@@ -61,21 +63,22 @@ class AcidSlime(arena.Monster):
 	def SpecialIntent(self, moveCall, moveAlternatives, moveChances):
 		# Slime cannot use Tackle twice in a row
 		if self.Size == 'L' or (self.Size == 'M' and self.ascension < 17):
-			ForbiddenIdx = self.Abilities.index(self.Tackle)
-			ForbiddenMove = self.Tackle
+			ForbiddenIdx = self.Callbacks.index(self.Tackle)
 		elif self.Size == 'M' and self.ascension >= 17:
-			ForbiddenIdx = self.Abilities.index(self.Lick)
-			ForbiddenMove = self.Lick
+			ForbiddenIdx = self.Callbacks.index(self.Lick)
 		elif self.Size == 'S':
 			if self.ascension >= 17 and len(self.History) == 0:
 				# Has to start on lick
-				moveCall = self.Lick
+				moveIdx = self.Callbacks.index(self.Lick)
+				moveCall = self.Abilities[moveIdx]
 			elif self.ascension >= 2 and len(self.History) > 0:
 				# Alternates between Lick and Tackle moves
 				prevCall = moveCall
-				moveCall = self.Lick if self.History[(self.HistoryIdx-1)%2] == self.Abilities.index(self.Tackle) else self.Tackle
+				lickCall = self.Abilities[self.Callbacks.index(self.Lick)]
+				tackleCall = self.Abilities[self.Callbacks.index(self.Tackle)]
+				moveCall = lickCall if self.History[(self.HistoryIdx-1)%2] == self.Callbacks.index(self.Tackle) else tackleCall
 			return moveCall
-		if moveCall == ForbiddenMove:
+		if moveCall == self.Abilities[ForbiddenIdx]:
 			if len(self.History) >= 1 and self.History[(self.HistoryIdx-1)%2] == ForbiddenIdx:
 				moveCall = self.rng.choices(moveAlternatives, moveChances, k=1)[0]
 		return moveCall
@@ -104,7 +107,12 @@ class AcidSlime(arena.Monster):
 		else: # self.Size == 'M' or 'S':
 			weak = 1
 		# Apply weak to target
-		print(f"{str(self)} uses LICK to apply {weak} weak to you!!")
+		weaknessPower = powers.Power(timings=powers.TRIGGER.OFFENSE, priority=1, turns=weak, callback=powers.WEAK, AffectDescription=powers.DESCRIPTIONS.WEAK)
+		print(f"{str(self)} creates LICK {weaknessPower}")
+		targets = self.ApplyPowers(weaknessPower, affectClass=self.Abilities[self.Callbacks.index(self.Lick)].affectClass,
+						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
+						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True)
+		print(f"{str(self)} uses LICK to apply {weak} weak to {[str(monster) for monster in targets]}!!")
 
 	def Tackle(self):
 		if self.Size == 'L':

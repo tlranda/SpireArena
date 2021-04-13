@@ -1,104 +1,27 @@
 # Slay the Spire Arena: Pit mobs vs one another and fight it out to the death!
-import random, enum
+import random
 global_rng = random.Random()
 from copy import deepcopy as dcpy
+# Defines power API
+from powers import *
 """
-Class Listing:
-	PowerObject, Power* represent callbacks to modify events
-	Monster represents a spire creature
-	MonsterGroup represents a collection of aligned creatures
-	Arena represents the fight itself
+	TODO: Make Monster.Alive a property or lambda or something?
 """
 
 """
-	Power Enum for what type of thing sources an effect
+#0 MonsterMove (Abstract)
+	Defines a particular monster move
+	Given a class, callback, and string-able attributes
 """
-class SOURCE(enum.Enum):
-	ATTACK = 0
-	SKILL = 1
-	POWER = 2
-	FX = 3
+class MonsterMove():
+	def __init__(self, affectClass, callback, description="<No move description provided>"):
+		self.affectClass = affectClass
+		self.callback = callback
+		self.ID = callback.__name__
+		self.description = description
 
-class POWER(enum.Enum):
-	OFFENSE = 0
-	DEFENSE = 1
-	ON_DEATH = 2
-	ON_KILL = 3
-	ON_ATTACK = 4
-	VS_ATTACK = 5
-	ON_SKILL = 6
-	VS_SKILL = 7
-	ON_POWER_GAIN = 8
-	VS_POWER_GAIN = 9
-	ON_POWER_LOSE = 10
-	VS_POWER_LOSE = 11
-	ON_TURN = 12
-	ON_HP_REDUCE = 13
-	VS_HP_REDUCE = 14
-	AFTER_ATTACK = 15
-	AFTER_ATTACK_ED = 16
-
-"""
-#0 PowerObject (Abstract)
-	Defines an API for events in the fight:
-		* Timing variants for ALL (BEFORE, ON, AFTER) : When to accept the event occurring
-	Instanceable Examples of Enum classes
-		* OffensePowers
-			# Priority Order: Strength (3), Shackles (2), Weak (1)
-		* DefensePowers
-			# Priority Order: Vulnerable (3), Intangible (2), Block (1)
-		* UtilityPowers
-			# On kill/death
-				# FungiCombust
-			# On/Vs attack/skill/power gain/power lose
-				# Chosen Hex, Awoken Phase 1
-			# On turn
-				# Lagavulin, OrbWalker
-			# On/Vs hp reduce
-				# Transient
-			# After attack(ed)
-				# Malleable, Thorns
-
-	ATTRIBUTES:
-		turns : Int (turns to live) or None (permanent)
-		priority : Int (higher # == higher priority)
-		triggers : List of POWER classes to activate on
-	METHODS:
-		Affect(value, cardtype, owner, target, *extra) : Implements the callback for the effect; returns value as it should be affected while applying side affects to owner and target
-		Prepare(*extra) : Prepares the next Affect call (optional)
-		TurnTick() : Reduce power lifespan each turn
-"""
-class Power():
-	"""
-		Shell of a class, holds a list of enum values for when it activates, a duration (None for infinite) and a method callback fitting the Affect API:
-			self, value, cardtype, owner, target, *extra
-		The callback method should affect value appropriately to achieve the power's end goals, and is provided access to the effect owner and effect target to apply any necessary side effects
-
-		A second callback is bound to the Prepare API (not used for all powers):
-			self, *extra
-		This should use variables in *extra tuple to set object internal state in preparation for future calls to Affect()
-
-		TurnTick should be called at the end of every turn on all powers for everything, decrements powers as needed. Returns True when the power should be eliminated
-	"""
-	def __init__(self, timings, turns, callback, callback2=None):
-		self.triggers = timings
-		self.turns = turns
-		self.Affect = callback
-		if callback2 is not None:
-			# Override self.Prepare()
-			self.Prepare = callback2
-
-	def Prepare(self, *extra):
-		# Shell method takes anything and does nothing
-		pass
-
-	def TurnTick(self):
-		# Make Powers have a lifespan
-		if self.turns is not None:
-			self.turns -= 1
-			return self.turns == 0
-		else:
-			return False
+	def __str__(self):
+		return f"{self.ID} defined as {self.description}"
 
 """
 #1 Monster (Abstract)
@@ -134,7 +57,7 @@ class Monster():
 		self.rng = global_rng
 		self.Name, self.Act, self.ascension = "<GenericMonster>", 0, 0
 		self.MaxHealth, self.Health, self.Block, self.Strength, self.Dexterity = 0, 0, 0, 0, 0
-		self.PowerPool, self.Pattern, self.Abilities = [], [], []
+		self.PowerPool, self.Pattern, self.Abilities, self.Callbacks = [], [], [], []
 		self.History, self.HistoryIdx = [], 0
 		self.Alive = True
 
@@ -172,16 +95,17 @@ class Monster():
 			# Does not return modified ability/probability list as it is either unchanged
 			# (default history check uses this given list) or it was changed (ergo default
 			# history check won't trigger)
-		not_move_sum = sum(self.Pattern) - self.Pattern[self.Abilities.index(move)]
-		remainingMoves = [_ for _ in self.Abilities if _ != move]
-		remainingChances = [_/not_move_sum for _, __ in zip(self.Pattern, self.Abilities) if __ != move]
+		move_idx = self.Callbacks.index(move.callback)
+		not_move_sum = sum(self.Pattern) - self.Pattern[move_idx]
+		remainingMoves = [_ for idx, _ in enumerate(self.Abilities) if idx != move_idx]
+		remainingChances = [_/not_move_sum for idx, _ in enumerate(self.Pattern) if idx != move_idx]
 		# This call to be overridden by implementing classes
 		move = self.SpecialIntent(move, remainingMoves, remainingChances)
-		move_idx = self.Abilities.index(move)
+		move_idx = self.Callbacks.index(move.callback)
 		# Normal History rejection (x3 never allowed)
 		if len(self.History) == 2 and sum(self.History)/2 == float(move_idx):
 			move = self.rng.choices(remainingMoves, weights=remainingChances, k=1)[0]
-			move_idx = self.Abilities.index(move)
+			move_idx = self.Callbacks.index(move.callback)
 		# Record history
 		if len(self.History) < 2:
 			self.History.append(move_idx)
@@ -193,10 +117,20 @@ class Monster():
 	def Turn(self, move=None):
 		if self.Alive:
 			move = self.MoveSelect(move)
-			print(f"{str(self)} performs {move.__name__}; history is {[self.Abilities[self.History[(self.HistoryIdx-_)%2]].__name__ for _ in range(len(self.History),0,-1)]}")
-			move()
+			print(f"{str(self)} performs {str(move)}; history is "
+				  f"{[self.Callbacks[self.History[(self.HistoryIdx-_)%2]].__name__ for _ in range(len(self.History),0,-1)]}")
+			move.callback()
 		else:
 			print(f"{self} is dead. Skipping turn")
+		# Tick all powers
+		removePowers = []
+		for power in self.PowerPool:
+			remove = power.TurnTick()
+			if remove:
+				removePowers.append(power)
+		# Remove expired powers
+		for power in removePowers:
+			self.PowerPool.remove(power)
 
 	def Empower(self, value, source_class, *trigger_classes, source, target):
 		"""
@@ -204,11 +138,15 @@ class Monster():
 		"""
 		powerQueue = []
 		for power in self.PowerPool:
-			for trigger in power.triggers:
-				if trigger in trigger_classes:
-					print(f"Trigger power {power}")
+			print(f"{str(self)} inspects power {power} with triggers {power.triggers} against {trigger_classes}")
+			for trigger in trigger_classes:
+				print(f"Is {trigger} in power {power}?")
+				if trigger in power.triggers:
+					print(f"YES: Trigger power {power}")
 					powerQueue.append(power)
 					break
+				else:
+					print(f"NO")
 		# Sort powerQueue by priority
 		powerQueue = sorted(powerQueue, key=lambda x: x.priority, reverse=True)
 		# Activate powers
@@ -220,6 +158,10 @@ class Monster():
 
 	def Select(self, ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True):
+		"""
+			Use generator functions Affect() to get monsters affected and for each damage instance, run it through all participants relevant powers
+			after the affect, run through both targets post powers based on the ultimate outcome
+		"""
 		# Get all the candidate groups
 		arenaGroups = [[val for val in self.Arena.Affect(self.Friendlies, IncludeSelf=ArenaSelf, All=ArenaAll)] for _ in range(ArenaTargets)]
 		# Determine number of targets to pick
@@ -250,6 +192,39 @@ class Monster():
 		# Return the targeted Monsters
 		return targetedMonsters
 
+	def ApplyPowers(self, *powers, affectClass=SOURCE.SKILL,
+				ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
+				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True):
+		"""
+			CALL FROM THE OBJECT APPLYING THE POWERS
+			powers = list of Power objects to add to the target Objects
+			affectClass is enum for ATTACK/POWER/SKILL/FX to determine if this application triggers any other powers
+			others specify how to locate targets for the power application
+		"""
+		targets = self.Select(ArenaTargets=ArenaTargets, ArenaSelf=ArenaSelf, ArenaAll=ArenaAll,
+				GroupTargets=GroupTargets, GroupOnlySelf=GroupOnlySelf, GroupIncludeSelf=GroupIncludeSelf, GroupAll=GroupAll, GroupCheckAlive=GroupCheckAlive)
+		enemies = self.Select(ArenaTargets=1, ArenaSelf=False, ArenaAll=True,
+				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=GroupCheckAlive)
+		Powers = [[TRIGGER.ON_POWER_GAIN], [TRIGGER.VS_POWER_GAIN]]
+		# Iteratively push powers but push them all at once to allow multipower applications to count as one for power trigger reasons
+		for target in targets:
+			target.PowerPool.extend(powers)
+			# React to power change
+			if target == self:
+				self.Empower(powers, affectClass, *Powers[0], source=self, target=self)
+				# Allies and self don't get VS triggers
+				for enemy in enemies:
+					enemy.Empower(powers, affectClass, *Powers[1], source=self, target=self)
+			else:
+				target.Empower(powers, affectClass, *Powers[0], source=self, target=target)
+				targets_enemies = target.Select(ArenaTargets=1, ArenaSelf=False, ArenaAll=True,
+								GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=GroupCheckAlive)
+				for target_enemy in targets_enemies:
+					# Allies of the target and the target itself don't get VS triggers
+					target_enemy.Empower(powers, affectClass, *Powers[1], source=self, target=target)
+		# Return targets for logging
+		return targets
+
 	def Damage(self, *amounts, empowerDamage=True, affectClass=SOURCE.ATTACK,
 				ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True):
@@ -259,10 +234,6 @@ class Monster():
 			empowerDamage determines if powers apply to the damage instance (either both ways or no ways)
 			affectClass is enum for ATTACK/POWER/SKILL/FX to determine if powers interact differently
 			others specify how to locate targets for the damage instance
-				Use None instead of a number for targets to indicate ALL
-
-			Use generator functions Affect() to get monsters affected and for each damage instance, run it through all participants relevant powers
-			after the affect, run through both targets post powers based on the ultimate outcome
 		"""
 		targets = self.Select(ArenaTargets=ArenaTargets, ArenaSelf=ArenaSelf, ArenaAll=ArenaAll,
 				GroupTargets=GroupTargets, GroupOnlySelf=GroupOnlySelf, GroupIncludeSelf=GroupIncludeSelf, GroupAll=GroupAll, GroupCheckAlive=GroupCheckAlive)
@@ -274,20 +245,20 @@ class Monster():
 			if self.Alive:
 				for target in targets:
 					if empowerDamage:
-						Powers = [[POWER.OFFENSE], [POWER.DEFENSE]]
+						Powers = [[TRIGGER.OFFENSE], [TRIGGER.DEFENSE]]
 						if affectClass == SOURCE.ATTACK:
-							Powers[0].append(POWER.ON_ATTACK)
-							Powers[1].append(POWER.VS_ATTACK)
+							Powers[0].append(TRIGGER.ON_ATTACK)
+							Powers[1].append(TRIGGER.VS_ATTACK)
 						elif affectClass == SOURCE.SKILL:
-							Powers[0].append(POWER.ON_SKILL)
-							Powers[1].append(POWER.VS_SKILL)
-						elif affectClass == SOURCE.POWER:
-							Powers[0].append(POWER.ON_POWER_GAIN)
-							Powers[1].append(POWER.VS_POWER_GAIN)
+							Powers[0].append(TRIGGER.ON_SKILL)
+							Powers[1].append(TRIGGER.VS_SKILL)
+						elif affectClass == SOURCE.TRIGGER:
+							Powers[0].append(TRIGGER.ON_POWER_GAIN)
+							Powers[1].append(TRIGGER.VS_POWER_GAIN)
 						# First you get to empower your damage
-						damage = self.Empower(damage, affectClass, Powers, source=self, target=target)
+						damage = self.Empower(damage, affectClass, *Powers[0], source=self, target=target)
 						# Then the target empowers the damage
-						damage = target.Empower(damage, affectClass, Powers, source=self, target=target)
+						damage = target.Empower(damage, affectClass, *Powers[1], source=self, target=target)
 					# Now that damage has been affected and side effects taken care of by powers, deal the damage
 					# Anything less than 0 damage is 0 damage
 					damage = max(0, damage)
@@ -295,17 +266,24 @@ class Monster():
 					target.Health -= damage
 					dealt[-1] += damage
 					# Now call post damage powers
-					Powers = [[POWER.AFTER_ATTACK],[POWER.AFTER_ATTACK_ED]]
+					Powers = [[TRIGGER.AFTER_ATTACK],[TRIGGER.AFTER_ATTACK_ED]]
 					if damage > 0:
-						Powers[0].append(POWER.VS_HP_REDUCE)
-						Powers[1].append(POWER.ON_HP_REDUCE)
+						Powers[0].append(TRIGGER.VS_HP_REDUCE)
+						Powers[1].append(TRIGGER.ON_HP_REDUCE)
 					if target_was_alive and not target.Alive:
-						Powers[0].append(POWER.ON_KILL)
-						Powers[1].append(POWER.ON_DEATH)
-					self.Empower(damage, affectClass, Powers[0], source=self, target=target)
-					target.Empower(damage, affectClass, Powers[1], source=self, target=target)
+						Powers[0].append(TRIGGER.ON_KILL)
+						Powers[1].append(TRIGGER.ON_DEATH)
+					self.Empower(damage, affectClass, *Powers[0], source=self, target=target)
+					target.Empower(damage, affectClass, *Powers[1], source=self, target=target)
 		# Return damage dealt for logging
 		return dealt, targets
+
+	def makeMoves(self, *move_tuples):
+		self.Callbacks = []
+		self.Abilities = []
+		for move in move_tuples:
+			self.Callbacks.append(move[1])
+			self.Abilities.append(MonsterMove(*move))
 
 """
 #2 MonsterGroup (Instanceable)
@@ -396,19 +374,23 @@ class Arena():
 	def __str__(self):
 		return self.ID
 
-	def AddGroup(self, group):
-		self.groups.append(group)
+	def AddGroups(self, *groups):
+		self.groups.extend(groups)
 
-	def RemoveGroup(self, group):
-		self.groups.remove(group)
+	def RemoveGroups(self, *groups):
+		for group in groups:
+			self.groups.remove(group)
 
 	def Reset(self):
+		self.turn = 0
 		for group in self.groups:
 			group.Reset()
 
 	def Turn(self):
+		print(f"ARENA BEGINS TURN {self.turn}")
 		for group in self.groups:
 			group.Turn()
+		self.turn += 1
 
 	def Affect(self, Friendly, IncludeSelf=False, All=False):
 		if not IncludeSelf:
@@ -423,16 +405,18 @@ class Arena():
 		for group in groups:
 			yield group
 
-	def Brawl(self):
+	def Brawl(self, max_turns = None):
 		self.Reset()
 		fight_on = sum([bool(group.fight_on) for group in self.groups])
 		while fight_on >= 2:
+			if max_turns is not None and self.turn >= max_turns:
+				print(f"ARENA TURN LIMIT REACHED")
+				break
 			self.Turn()
 			fight_on = sum([bool(group.fight_on) for group in self.groups])
-		winner = None
+		winners = []
 		for group in self.groups:
 			if group.fight_on:
-				winner = group
-				break
-		return winner
+				winners.append(group)
+		return winners
 
