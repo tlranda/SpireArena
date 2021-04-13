@@ -23,20 +23,18 @@ def parse(prs, args=None):
 
 def MakeMonsterFromString(string, battlefield=None, monsterGroup=None):
 	line = string.rstrip().split()
-	print(line)
 	monsterType = line[0]
 	monsterMaker = {'ID': line[1],
 					'Arena': battlefield,
 					'Friendlies': monsterGroup
 					}
 	monsterMaker.update(dict((k,v) for k,v in zip(line[2::2], line[3::2])))
-	print(monsterMaker)
 	return monsters.makeMonster(monsterType, **monsterMaker)
 
 def MakeMonsterGroupFromFile(fh, battlefield, ID=None):
 	if ID is None:
 		global num_groups
-		ID = str(num_groups)
+		ID = f"Group_{num_groups}"
 		num_groups += 1
 	monsterGroup = arena.MonsterGroup([], ID=ID)
 	for line in fh.readlines():

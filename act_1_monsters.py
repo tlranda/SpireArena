@@ -70,17 +70,13 @@ class AcidSlime(arena.Monster):
 			if self.ascension >= 17 and len(self.History) == 0:
 				# Has to start on lick
 				moveCall = self.Lick
-				print(f"{self.Name} {self.ID} must initiate combat with 'Lick'")
 			elif self.ascension >= 2 and len(self.History) > 0:
 				# Alternates between Lick and Tackle moves
 				prevCall = moveCall
 				moveCall = self.Lick if self.History[(self.HistoryIdx-1)%2] == self.Abilities.index(self.Tackle) else self.Tackle
-				if prevCall != moveCall:
-					print(f"{self.Name} {self.ID} must alternate between moves")
 			return moveCall
 		if moveCall == ForbiddenMove:
 			if len(self.History) >= 1 and self.History[(self.HistoryIdx-1)%2] == ForbiddenIdx:
-				print(f"{self.Name} {self.ID} is prohibited from using '{ForbiddenMove.__name__}' twice in a row")
 				moveCall = self.rng.choices(moveAlternatives, moveChances, k=1)[0]
 		return moveCall
 
@@ -100,7 +96,7 @@ class AcidSlime(arena.Monster):
 		# Deal damage
 		# Shuffle n_slimed slime statuses into target's discard pile (however that is implemented)
 		dealt, targets = self.Damage(damage)
-		print(f"{self.Name} {self.ID} uses CORROSIVE_SPIT to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you and shuffle {n_slimed} into {[str(monster) for monster in targets]}'s discard!!")
+		print(f"{str(self)} uses CORROSIVE_SPIT to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you and shuffle {n_slimed} into {[str(monster) for monster in targets]}'s discard!!")
 
 	def Lick(self):
 		if self.Size == 'L':
@@ -108,7 +104,7 @@ class AcidSlime(arena.Monster):
 		else: # self.Size == 'M' or 'S':
 			weak = 1
 		# Apply weak to target
-		print(f"{self.Name} {self.ID} uses LICK to apply {weak} weak to you!!")
+		print(f"{str(self)} uses LICK to apply {weak} weak to you!!")
 
 	def Tackle(self):
 		if self.Size == 'L':
@@ -127,7 +123,9 @@ class AcidSlime(arena.Monster):
 			else:
 				damage = 3
 		# Deal damage
-		damages = [damage, damage]
-		dealt, targets = self.Damage(*damages)
-		print(f"{self.Name} {self.ID} uses TACKLE to deal RAW_INTENT:{damages} --> ACTUAL:{dealt} damage to {[str(monster) for monster in targets]}!!")
+		dealt, targets = self.Damage(damage)
+		# How you would do a multihit:
+		#damages = [damage, damage]
+		#dealt, targets = self.Damage(*damages)
+		print(f"{str(self)} uses TACKLE to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to {[str(monster) for monster in targets]}!!")
 

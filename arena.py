@@ -139,7 +139,12 @@ class Monster():
 		self.Alive = True
 
 	def __str__(self):
-		return f"{self.Name} {self.ID}"
+		string = f"{self.Name} {self.ID}"
+		if self.Friendlies is not None:
+			string = f"{str(self.Friendlies)}::{string}"
+		if self.Arena is not None:
+			string = f"{str(self.Arena)}::{string}"
+		return string
 
 	def Reset(self):
 		self.Health = self.MaxHealth
@@ -163,7 +168,6 @@ class Monster():
 		"""
 		if move is None:
 			move = self.rng.choices(self.Abilities, weights=self.Pattern, k=1)[0]
-		print(f"{self} originally selects {move.__name__}")
 		# Special History rejection
 			# Does not return modified ability/probability list as it is either unchanged
 			# (default history check uses this given list) or it was changed (ergo default
@@ -178,7 +182,6 @@ class Monster():
 		if len(self.History) == 2 and sum(self.History)/2 == float(move_idx):
 			move = self.rng.choices(remainingMoves, weights=remainingChances, k=1)[0]
 			move_idx = self.Abilities.index(move)
-			print(f"{self}'s move is overriden by default history rules")
 		# Record history
 		if len(self.History) < 2:
 			self.History.append(move_idx)
@@ -190,7 +193,7 @@ class Monster():
 	def Turn(self, move=None):
 		if self.Alive:
 			move = self.MoveSelect(move)
-			print(f"{self.Name} {self.ID} performs {move.__name__}; history is {[self.Abilities[self.History[(self.HistoryIdx-_)%2]].__name__ for _ in range(len(self.History),0,-1)]}")
+			print(f"{str(self)} performs {move.__name__}; history is {[self.Abilities[self.History[(self.HistoryIdx-_)%2]].__name__ for _ in range(len(self.History),0,-1)]}")
 			move()
 		else:
 			print(f"{self} is dead. Skipping turn")
@@ -328,7 +331,7 @@ class MonsterGroup():
 		self.fight_on = len(monsters)
 
 	def __str__(self):
-		return f"{self.ID} with monsters: {[str(monster) for monster in self.monsters]}"
+		return f"{self.ID}"
 
 	def AddMonster(self, monster, ephemeral=True):
 		print(f"Monster Group is adding monster {monster}")
@@ -383,11 +386,15 @@ class MonsterGroup():
 		* Affect(MonsterGroup, IncludeSelf, All) : Generator for included MonsterGroups. Only includes the self-group if IncludeSelf is True, only affects one group at random unless All is True
 """
 class Arena():
-	def __init__(self, groups=[]):
+	def __init__(self, groups=[], ID="<TemplateArena>"):
 		self.groups = groups
 		self.turn = 0
+		self.ID = ID
 		global global_rng
 		self.rng = global_rng
+
+	def __str__(self):
+		return self.ID
 
 	def AddGroup(self, group):
 		self.groups.append(group)
