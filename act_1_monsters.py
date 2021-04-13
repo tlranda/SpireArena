@@ -99,7 +99,8 @@ class AcidSlime(arena.Monster):
 				damage = 7
 		# Deal damage
 		# Shuffle n_slimed slime statuses into target's discard pile (however that is implemented)
-		print(f"{self.Name} {self.ID} uses CORROSIVE_SPIT to deal {damage} damage to you and shuffle {n_slimed} into your discard!!")
+		dealt = self.Damage(damage)
+		print(f"{self.Name} {self.ID} uses CORROSIVE_SPIT to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you and shuffle {n_slimed} into your discard!!")
 
 	def Lick(self):
 		if self.Size == 'L':
@@ -126,5 +127,6 @@ class AcidSlime(arena.Monster):
 			else:
 				damage = 3
 		# Deal damage
-		print(f"{self.Name} {self.ID} uses TACKLE to deal {damage} damage to you!!")
+		dealt = self.Damage(damage)
+		print(f"{self.Name} {self.ID} uses TACKLE to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you!!")
 

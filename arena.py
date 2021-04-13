@@ -217,7 +217,7 @@ class Monster():
 		# Get all the candidate groups
 		arenaGroups = [[val for val in self.arena.Affect(self.Friendlies, Self=ArenaSelf, All=ArenaAll)] for _ in range(ArenaTargets)]
 		# Determine number of targets to pick
-		maxTargeted = sum([_[0] for _ in arenaGroups)
+		maxTargeted = sum([_[0] for _ in arenaGroups])
 		if ArenaTargets is not None:
 			maxTargeted = min(ArenaTargets, maxTargeted)
 		# Make actual groups
@@ -313,11 +313,13 @@ class Monster():
 """
 class MonsterGroup():
 	def __init__(self, monsters=[]):
+		print(f"Making monster group out of {monsters}")
 		self.monsters = monsters
 		self.ephemeral = [False for _ in monsters]
 		self.fight_on = len(monsters)
 
 	def AddMonster(self, monster, ephemeral=True):
+		print(f"Monster Group is adding monster {monster}")
 		self.monsters.append(monster)
 		self.ephemeral.append(ephemeral)
 		self.fight_on += 1

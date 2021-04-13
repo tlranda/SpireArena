@@ -19,10 +19,8 @@ def parse(prs, args=None):
 	args.group = list(np.asarray(args.group).flatten())
 	return args
 
-def MakeMonsterGroupFromFile(fh, arena):
-	monsters_for_group = []
-	monsterGroup = arena.MonsterGroup()
-	arena.AddGroup(monsterGroup)
+def MakeMonsterGroupFromFile(fh, battlefield):
+	monsterGroup = arena.MonsterGroup([])
 	for line in fh.readlines():
 		"""
 			File format:
@@ -34,18 +32,21 @@ def MakeMonsterGroupFromFile(fh, arena):
 					Class Constructors are required to properly convert strings to the intended data type for such inputs
 		"""
 		line = line.rstrip().split()
+		print(line)
 		monsterType = line[0]
 		monsterMaker = {'ID': line[1],
-						'Arena': arena,
+						'Arena': battlefield,
 						'Friendlies': monsterGroup
 						}
 		monsterMaker.update(dict((k,v) for k,v in zip(line[2::2], line[3::2])))
-		monsters.makeMonster(monsterType, **monsterMaker)
-	return monsterGroup
+		print(monsterMaker)
+		monster = monsters.makeMonster(monsterType, **monsterMaker)
+		monsterGroup.AddMonster(monster, ephemeral=False)
+	battlefield.AddGroup(monsterGroup)
 
 """
 	Then basically want a statistician class to take an Arena and fight it # times, tracking which group is winning and make nice outputs based on that
-	Ideally the statistician can listen to all the groups and/or monsters individually to track block/health/damage give/take too 
+	Ideally the statistician can listen to all the groups and/or monsters individually to track block/health/damage give/take too
 """
 
 if __name__ == '__main__':
