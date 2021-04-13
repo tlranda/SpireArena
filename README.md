@@ -20,5 +20,6 @@ Design TODO:
 * Default monster powers:
 	* Start of Turn: Lose all block unless you have the Barrier power
 	* On death: Announce death, mark dead in group
+
 Labor TODO:
 * Implementing powers/monsters from the game
