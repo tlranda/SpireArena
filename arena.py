@@ -42,11 +42,11 @@ class POWER(enum.Enum):
 #0 PowerObject (Abstract)
 	Defines an API for events in the fight:
 		* Timing variants for ALL (BEFORE, ON, AFTER) : When to accept the event occurring
-	Subclasses (instanceable)
+	Instanceable Examples of Enum classes
 		* OffensePowers
-			# Priority ORder: Strength, Shackles, Weak
+			# Priority Order: Strength (3), Shackles (2), Weak (1)
 		* DefensePowers
-			# Priority Order: Vulnerable, Intangible, Block
+			# Priority Order: Vulnerable (3), Intangible (2), Block (1)
 		* UtilityPowers
 			# On kill/death
 				# FungiCombust
@@ -60,11 +60,46 @@ class POWER(enum.Enum):
 				# Malleable, Thorns
 
 	ATTRIBUTES:
-		Turns : Int (turns to live) or None (permanent)
-		trigger : POWER class to activate on
+		turns : Int (turns to live) or None (permanent)
+		priority : Int (higher # == higher priority)
+		triggers : List of POWER classes to activate on
 	METHODS:
-		Affect(value, cardtype, owner, target) : Implements the callback for the effect; returns value as it should be affected while applying side affects to owner and target
+		Affect(value, cardtype, owner, target, *extra) : Implements the callback for the effect; returns value as it should be affected while applying side affects to owner and target
+		Prepare(*extra) : Prepares the next Affect call (optional)
+		TurnTick() : Reduce power lifespan each turn
 """
+class Power():
+	"""
+		Shell of a class, holds a list of enum values for when it activates, a duration (None for infinite) and a method callback fitting the Affect API:
+			self, value, cardtype, owner, target, *extra
+		The callback method should affect value appropriately to achieve the power's end goals, and is provided access to the effect owner and effect target to apply any necessary side effects
+
+		A second callback is bound to the Prepare API (not used for all powers):
+			self, *extra
+		This should use variables in *extra tuple to set object internal state in preparation for future calls to Affect()
+
+		TurnTick should be called at the end of every turn on all powers for everything, decrements powers as needed. Returns True when the power should be eliminated
+	"""
+	def __init__(self, timings, turns, callback, callback2=None):
+		self.triggers = timings
+		self.turns = turns
+		self.Affect = callback
+		if callback2 is not None:
+			# Override self.Prepare()
+			self.Prepare = callback2
+
+	def Prepare(self, *extra):
+		# Shell method takes anything and does nothing
+		pass
+
+	def TurnTick(self):
+		# Make Powers have a lifespan
+		if self.turns is not None:
+			self.turns -= 1
+			return self.turns == 0
+		else:
+			return False
+
 """
 #1 Monster (Abstract)
 	Defines a particular Spire abomination
@@ -160,13 +195,21 @@ class Monster():
 		else:
 			print(f"{self} is dead. Skipping turn")
 
-	def Empower(self, value, source_class, trigger_class, source, target):
+	def Empower(self, value, source_class, *trigger_classes, source, target):
 		"""
 			Alter value using self.PowerPool based on trigger_class and source_class
 		"""
+		powerQueue = []
 		for power in self.PowerPool:
-			if power.trigger == trigger_class:
-				value = power.Affect(value, source_class, source, target)
+			for trigger in power.triggers:
+				if trigger in trigger_classes:
+					powerQueue.append(power)
+					break
+		# Sort powerQueue by priority
+		powerQueue = sorted(powerQueue, key=lambda x: x.priority, reverse=True)
+		# Activate powers
+		for power in powerQueue:
+			value = power.Affect(value, source_class, source, target)
 		return value
 
 	def Select(self, ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
@@ -223,37 +266,35 @@ class Monster():
 			if self.Alive:
 				for target in targets:
 					if empowerDamage:
+						Powers = [[POWER.OFFENSE], [POWER.DEFENSE]]
+						if affectClass == SOURCE.ATTACK:
+							Powers[0].append(POWER.ON_ATTACK)
+							Powers[1].append(POWER.VS_ATTACK)
+						elif affectClass == SOURCE.SKILL:
+							Powers[0].append(POWER.ON_SKILL)
+							Powers[1].append(POWER.VS_SKILL)
+						elif affectClass == SOURCE.POWER:
+							Powers[0].append(POWER.ON_POWER_GAIN)
+							Powers[1].append(POWER.VS_POWER_GAIN)
 						# First you get to empower your damage
-						damage = self.empower(damage, affectClass, POWER.OFFENSE, self, target)
-						if affectClass == SOURCE.ATTACK:
-							damage = self.empower(damage, affectClass, POWER.ON_ATTACK, self, target)
-						elif affectClass == SOURCE.SKILL:
-							damage = self.empower(damage, affectClass, POWER.ON_SKILL, self, target)
-						elif affectClass == SOURCE.POWER:
-							damage = self.empower(damage, affectClass, POWER.ON_POWER_GAIN, self, target)
+						damage = self.Empower(damage, affectClass, Powers, source=self, target=target)
 						# Then the target empowers the damage
-						damage = target.empower(damage, affectClass, POWER.DEFENSE, self, target)
-						if affectClass == SOURCE.ATTACK:
-							damage = target.empower(damage, affectClass, POWER.VS_ATTACK, self, target)
-						elif affectClass == SOURCE.SKILL:
-							damage = target.empower(damage, affectClass, POWER.VS_SKILL, self, target)
-						elif affectClass == SOURCE.POWER:
-							damage = target.empower(damage, affectClass, POWER.VS_POWER_GAIN, self, target)
+						damage = target.Empower(damage, affectClass, Powers, source=self, target=target)
 					# Now that damage has been affected and side effects taken care of by powers, deal the damage
 					# Anything less than 0 damage is 0 damage
 					damage = max(0, damage)
 					target_was_alive = target.Alive
 					target.Health -= damage
 					# Now call post damage powers
-					self.empower(damage, affectClass, POWER.AFTER_ATTACK, self, target)
-					target.empower(damage, affectClass, POWER.AFTER_ATTACK_ED, self, target)
+					Powers = [[POWER.AFTER_ATTACK],[POWER.AFTER_ATTACK_ED]]
 					if damage > 0:
-						self.empower(damage, affectClass, POWER.VS_HP_REDUCE, self, target)
-						target.empower(damage, affectClass, POWER.ON_HP_REDUCE, self.target)
+						Powers[0].append(POWER.VS_HP_REDUCE)
+						Powers[1].append(POWER.ON_HP_REDUCE)
 					if target_was_alive and not target.Alive:
-						self.empower(damage, affectClass, POWER.ON_KILL, self, target)
-						target.empower(damage, affectClass, POWER.ON_DEATH, self, target)
-
+						Powers[0].append(POWER.ON_KILL)
+						Powers[1].append(POWER.ON_DEATH)
+					self.empower(damage, affectClass, Powers[0], self, target)
+					target.empower(damage, affectClass, Powers[1], self, target)
 
 """
 #2 MonsterGroup (Instanceable)
