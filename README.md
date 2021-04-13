@@ -13,3 +13,12 @@ STRUCTURE:
 	+ sample_monsters_vs.txt: Three Medium AcidSlimes at ascension 17
 	+ single_slime_1.txt: One Large AcidSlime at ascension 17
 	+ single_slime_2.txt: One Medium AcidSlime at ascension 2
+
+Design TODO:
+* Implementing statuses and how they interact with monster intents
+* Add a block parameter to abstract monsters
+* Default monster powers:
+	* Start of Turn: Lose all block unless you have the Barrier power
+	* On death: Announce death, mark dead in group
+Labor TODO:
+* Implementing powers/monsters from the game

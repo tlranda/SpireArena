@@ -31,6 +31,11 @@ class TRIGGER(enum.Enum):
 
 class DESCRIPTIONS():
 	WEAK = "Reduce attack damage by 25%"
+	SHACKLES = "Reduce Strength for 1 turn by 1 per stack"
+	STRENGTH = "Increase damage by 1 per stack"
+	VULNERABLE = "Increase attack damage by 50%"
+	INTANGIBLE = "Reduce attack damage to 1"
+	BLOCK = "Reduce attack damage by 1 per stack, then remove that many stacks"
 
 """
 #0 PowerObject (Abstract)
@@ -40,7 +45,7 @@ class DESCRIPTIONS():
 		* OffensePowers
 			# Priority Order: Strength (3), Shackles (2), Weak (1)
 		* DefensePowers
-			# Priority Order: Vulnerable (3), Intangible (2), Block (1)
+			# Priority Order: Vulnerable (3), Intangible (2), Block (use, 1)
 		* UtilityPowers
 			# On kill/death
 				# FungiCombust
@@ -120,11 +125,65 @@ class Power():
 			return False
 
 # Implement Powers as callbacks
-def WEAK(value, affectClass, source, target):
+# TRIGGER.OFFENSE
+def WEAK(value, affectClass, source, target, *extra):
 	"""
+		Trigger should be TRIGGER.OFFENSE
+		Priority should be 1
 		Value = Outgoing Damage
 		Reduce by 25% (round down)
 		Side Effects: None
 	"""
-	return int(value * .75)
-
+	return int(value * 0.75)
+def SHACKLES(value, affectClass, source, target, *extra):
+	"""
+		TRIGGER should be TRIGGER.OFFENSE
+		Priority should be 2
+		Turns should be 1
+		Value = Outgoing Damage
+		Extra = ShackleAmount (use negative value for temporary strength but I don't think any monsters have that)
+		Side Effects: None
+	"""
+	return max(0, value-extra[0])
+def STRENGTH(value, affectClass, source, target, *extra):
+	"""
+		TRIGGER should be TRIGGER.OFFENSE
+		Priority should be 3
+		Turns should be None
+		Value = Outgoing Damage
+		Extra = StrengthAmount
+		Side Effects: None
+	"""
+	return value+extra[0]
+# TRIGGER.DEFENSE
+def VULNERABLE(value, affectClass, source, target, *extra):
+	"""
+		TRIGGER should be TRIGGER.DEFENSE
+		Priority should be 3
+		Value = Outgoing Damage
+		Increase by 50% (round down)
+		Side Effects: None
+	"""
+	return int(value * 1.5)
+def INTANGIBLE(value, affectClass, source, target, *extra):
+	"""
+		TRIGGER should be TRIGGER.DEFENSE
+		Priority should be 2
+		Value = Outgoing Damage
+		Reduce to 1
+		Side Effects: None
+	"""
+	return min(value, 1)
+def BLOCK(value, affectClass, source, target, *extra):
+	"""
+		TRIGGER should be TRIGGER.DEFENSE
+		Priority should be 2
+		Turns should be None (This is not the BLOCK GAIN trigger, this is the BLOCK USE trigger -- it is ALWAYS ON)
+		Value = Outgoing Damage
+		Side Effects: Reduce BlockAmount in target by blocked amount
+	"""
+	available_block = target.Block
+	blocked_damage = min(value, available_block)
+	value -= blocked_damage
+	target.Block = available_block - blocked_damage
+	return value

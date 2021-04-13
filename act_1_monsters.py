@@ -110,7 +110,8 @@ class AcidSlime(arena.Monster):
 		weaknessPower = powers.Power(timings=powers.TRIGGER.OFFENSE, priority=1, turns=weak, callback=powers.WEAK, AffectDescription=powers.DESCRIPTIONS.WEAK)
 		targets = self.ApplyPowers(weaknessPower, affectClass=self.Abilities[self.Callbacks.index(self.Lick)].affectClass,
 						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
-						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True)
+						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
+						extras=[])
 		print(f"{str(self)} uses LICK to apply {weak} weak to {[str(monster) for monster in targets]}!!")
 
 	def Tackle(self):

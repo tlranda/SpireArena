@@ -56,7 +56,7 @@ class Monster():
 		global global_rng
 		self.rng = global_rng
 		self.Name, self.Act, self.ascension = "<GenericMonster>", 0, 0
-		self.MaxHealth, self.Health, self.Block, self.Strength, self.Dexterity = 0, 0, 0, 0, 0
+		self.MaxHealth, self.Health, self.Block = 0, 0, 0
 		self.PowerPool, self.Pattern, self.Abilities, self.Callbacks = [], [], [], []
 		self.History, self.HistoryIdx = [], 0
 		self.Alive = True
@@ -125,7 +125,7 @@ class Monster():
 		else:
 			print(f"{self} is dead. Skipping turn")
 
-	def Empower(self, value, source_class, *trigger_classes, source, target):
+	def Empower(self, value, source_class, *trigger_classes, source, target, extras=[]):
 		"""
 			Alter value using self.PowerPool based on trigger_class and source_class
 		"""
@@ -139,7 +139,7 @@ class Monster():
 		powerQueue = sorted(powerQueue, key=lambda x: x.priority, reverse=True)
 		# Activate powers
 		for power in powerQueue:
-			new_value = power.Affect(value, source_class, source, target)
+			new_value = power.Affect(value, source_class, source, target, extras)
 			print("\t"+f"{str(self)}'s {power} updates value from {value} to {new_value}")
 			value = new_value
 		return value
@@ -182,7 +182,8 @@ class Monster():
 
 	def ApplyPowers(self, *powers, affectClass=SOURCE.SKILL,
 				ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
-				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True):
+				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
+				extras=[]):
 		"""
 			CALL FROM THE OBJECT APPLYING THE POWERS
 			powers = list of Power objects to add to the target Objects
@@ -202,20 +203,21 @@ class Monster():
 				self.Empower(powers, affectClass, *Powers[0], source=self, target=self)
 				# Allies and self don't get VS triggers
 				for enemy in enemies:
-					enemy.Empower(powers, affectClass, *Powers[1], source=self, target=self)
+					enemy.Empower(powers, affectClass, *Powers[1], source=self, target=self, extras=extras)
 			else:
-				target.Empower(powers, affectClass, *Powers[0], source=self, target=target)
+				target.Empower(powers, affectClass, *Powers[0], source=self, target=target, extras=extras)
 				targets_enemies = target.Select(ArenaTargets=1, ArenaSelf=False, ArenaAll=True,
 								GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=GroupCheckAlive)
 				for target_enemy in targets_enemies:
 					# Allies of the target and the target itself don't get VS triggers
-					target_enemy.Empower(powers, affectClass, *Powers[1], source=self, target=target)
+					target_enemy.Empower(powers, affectClass, *Powers[1], source=self, target=target, extras=extras)
 		# Return targets for logging
 		return targets
 
 	def Damage(self, *amounts, empowerDamage=True, affectClass=SOURCE.ATTACK,
 				ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
-				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True):
+				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
+				extras=[]):
 		"""
 			CALL FROM THE OBJECT DEALING THE DAMAGES
 			amounts = list of damage values to produce (affected by powers)
@@ -244,9 +246,9 @@ class Monster():
 							Powers[0].append(TRIGGER.ON_POWER_GAIN)
 							Powers[1].append(TRIGGER.VS_POWER_GAIN)
 						# First you get to empower your damage
-						damage = self.Empower(damage, affectClass, *Powers[0], source=self, target=target)
+						damage = self.Empower(damage, affectClass, *Powers[0], source=self, target=target, extras=extras)
 						# Then the target empowers the damage
-						damage = target.Empower(damage, affectClass, *Powers[1], source=self, target=target)
+						damage = target.Empower(damage, affectClass, *Powers[1], source=self, target=target, extras=extras)
 					# Now that damage has been affected and side effects taken care of by powers, deal the damage
 					# Anything less than 0 damage is 0 damage
 					damage = max(0, damage)
@@ -261,8 +263,8 @@ class Monster():
 					if target_was_alive and not target.Alive:
 						Powers[0].append(TRIGGER.ON_KILL)
 						Powers[1].append(TRIGGER.ON_DEATH)
-					self.Empower(damage, affectClass, *Powers[0], source=self, target=target)
-					target.Empower(damage, affectClass, *Powers[1], source=self, target=target)
+					self.Empower(damage, affectClass, *Powers[0], source=self, target=target, extras=extras)
+					target.Empower(damage, affectClass, *Powers[1], source=self, target=target, extras=extras)
 		# Return damage dealt for logging
 		return dealt, targets
 
