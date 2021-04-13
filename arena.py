@@ -117,20 +117,13 @@ class Monster():
 	def Turn(self, move=None):
 		if self.Alive:
 			move = self.MoveSelect(move)
+			"""
 			print(f"{str(self)} performs {str(move)}; history is "
 				  f"{[self.Callbacks[self.History[(self.HistoryIdx-_)%2]].__name__ for _ in range(len(self.History),0,-1)]}")
+			"""
 			move.callback()
 		else:
 			print(f"{self} is dead. Skipping turn")
-		# Tick all powers
-		removePowers = []
-		for power in self.PowerPool:
-			remove = power.TurnTick()
-			if remove:
-				removePowers.append(power)
-		# Remove expired powers
-		for power in removePowers:
-			self.PowerPool.remove(power)
 
 	def Empower(self, value, source_class, *trigger_classes, source, target):
 		"""
@@ -138,21 +131,16 @@ class Monster():
 		"""
 		powerQueue = []
 		for power in self.PowerPool:
-			print(f"{str(self)} inspects power {power} with triggers {power.triggers} against {trigger_classes}")
 			for trigger in trigger_classes:
-				print(f"Is {trigger} in power {power}?")
 				if trigger in power.triggers:
-					print(f"YES: Trigger power {power}")
 					powerQueue.append(power)
 					break
-				else:
-					print(f"NO")
 		# Sort powerQueue by priority
 		powerQueue = sorted(powerQueue, key=lambda x: x.priority, reverse=True)
 		# Activate powers
 		for power in powerQueue:
 			new_value = power.Affect(value, source_class, source, target)
-			print(f"{power} updates value from {value} to {new_value}")
+			print("\t"+f"{str(self)}'s {power} updates value from {value} to {new_value}")
 			value = new_value
 		return value
 
@@ -311,6 +299,10 @@ class MonsterGroup():
 	def __str__(self):
 		return f"{self.ID}"
 
+	def __iter__(self):
+		for monster in self.monsters:
+			yield monster
+
 	def AddMonster(self, monster, ephemeral=True):
 		print(f"Monster Group is adding monster {monster}")
 		self.monsters.append(monster)
@@ -335,6 +327,16 @@ class MonsterGroup():
 	def Turn(self):
 		for monster in self.monsters:
 			monster.Turn()
+		# Tick all powers for all monsters after the group's turn
+		for monster in self.monsters:
+			removePowers = []
+			for power in monster.PowerPool:
+				remove = power.TurnTick()
+				if remove:
+					removePowers.append(power)
+			# Remove expired powers
+			for power in removePowers:
+				monster.PowerPool.remove(power)
 
 	def Affect(self, SourceMonster, OnlySelf=False, IncludeSelf=False, All=False, CheckAlive=True):
 		if OnlySelf:
@@ -373,6 +375,10 @@ class Arena():
 
 	def __str__(self):
 		return self.ID
+
+	def __iter__(self):
+		for group in self.groups:
+			yield group
 
 	def AddGroups(self, *groups):
 		self.groups.extend(groups)

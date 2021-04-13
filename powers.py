@@ -76,7 +76,7 @@ class Power():
 
 		TurnTick should be called at the end of every turn on all powers for everything, decrements powers as needed. Returns True when the power should be eliminated
 	"""
-	def __init__(self, timings, priority, turns, callback, callback2=None, PrepareDescription="Default Prepare--no effect", AffectDescription="No Description Provided"):
+	def __init__(self, timings, priority, turns, callback, callback2=None, PrepareDescription=None, AffectDescription=None):
 		if type(timings) is not list:
 			try:
 				timings = list(timings)
@@ -95,7 +95,17 @@ class Power():
 
 	def __str__(self):
 		turns_left = "infinity" if self.turns is None else str(self.turns)
-		return f"{self.name} [Priority {self.priority}, {turns_left} turns left], defined by [Prepare: \"{self.PrepareDescription}\", Affect: \"{self.AffectDescription}\"]"
+		prepare = "" if self.PrepareDescription is None else f"Prepare: \"{self.PrepareDescription}\""
+		affect = "" if self.AffectDescription is None else f"Affect: \"{self.AffectDescription}\""
+		if prepare == "" and affect == "":
+			definition = ""
+		else:
+			if prepare == "":
+				definition = affect
+			else:
+				definition = prepare+", "+affect
+			definition = ", "+definition
+		return f"{self.name} [Priority {self.priority}, {turns_left} turns left{definition}]"
 
 	def Prepare(self, *extra):
 		# Shell method takes anything and does nothing
