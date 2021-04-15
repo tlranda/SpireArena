@@ -1,7 +1,11 @@
 import arena, powers
 
 def objects():
-	return {"AcidSlime": AcidSlime}
+	return {"AcidSlime": AcidSlime,
+	       	"Slaver": Slaver,
+	        "JawWorm": JawWorm,
+	        "Cultist": Cultist,
+	        "Louse": Louse}
 
 """
 	Known parties:
