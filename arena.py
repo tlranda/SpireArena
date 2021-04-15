@@ -1,8 +1,9 @@
 # Slay the Spire Arena: Pit mobs vs one another and fight it out to the death!
 import random
+# This is the ONLY rng source that should be used in Arena code--implementers can use their own RNG separately
 global_rng = random.Random()
 from copy import deepcopy as dcpy
-# Defines power API
+# Get other library APIs
 from powers import *
 from monsters import *
 
@@ -19,7 +20,10 @@ from monsters import *
 		* RemoveMonster(Monster) : Some monsters are not removed by dying (ie: DarkSlimes)
 		* Reset() : Respawn all non-ephemeral monsters in the group
 		* Turn() : This group takes a turn
-		* Affect(Monster, OnlySelf, IncludeSelf, All, CheckAlive) : Generator over the group's monsters. If OnlySelf, only yields the Monster if found in the group. IncludeSelf and All work as in the Arena class's Affect(). CheckAlive means the monster needs to respond as alive to be included.
+		* Affect(Monster, OnlySelf, IncludeSelf, All, CheckAlive) : Generator over the group's monsters.
+				If OnlySelf, only yields the Monster if found in the group.
+				IncludeSelf and All work as in the Arena class's Affect().
+				CheckAlive means the monster needs to respond as alive to be included.
 """
 class MonsterGroup():
 	def __init__(self, monsters=[], ID="<TemplateGroup>"):
@@ -96,7 +100,8 @@ class MonsterGroup():
 		* RemoveGroup(MonsterGroup) : Remove a group of monsters from the fight
 		* Reset() : Respawn all monsters in all groups
 		* Turn() : Execute a turn of combat
-		* Affect(MonsterGroup, IncludeSelf, All) : Generator for included MonsterGroups. Only includes the self-group if IncludeSelf is True, only affects one group at random unless All is True
+		* Affect(MonsterGroup, IncludeSelf, All) : Generator for included MonsterGroups.
+				Only includes the self-group if IncludeSelf is True, only affects one group at random unless All is True
 """
 class Arena():
 	def __init__(self, groups=[], ID="<TemplateArena>"):

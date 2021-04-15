@@ -111,8 +111,7 @@ class AcidSlime(monsters.Monster):
 		else: # self.Size == 'M' or 'S':
 			weak = 1
 		# Apply weak to target
-		weaknessPower = powers.Power(timings=powers.TRIGGER.OFFENSE, priority=1, turns=weak, callback=powers.WEAK, AffectDescription=powers.DESCRIPTIONS.WEAK)
-		targets = self.ApplyPowers(weaknessPower, affectClass=self.Abilities[self.Callbacks.index(self.Lick)].affectClass,
+		targets = self.ApplyPowers(powers.makeWeak(weak), affectClass=self.Abilities[self.Callbacks.index(self.Lick)].affectClass,
 						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
@@ -233,8 +232,7 @@ class Slaver(monsters.Monster):
 		# Deal damage
 		dealt, targets = self.Damage(damage)
 		# Apply weak to target
-		weaknessPower = powers.Power(timings=powers.TRIGGER.OFFENSE, priority=1, turns=weak, callback=powers.WEAK, AffectDescription=powers.DESCRIPTIONS.WEAK)
-		targets = self.ApplyPowers(weaknessPower, affectClass=self.Abilities[self.Callbacks.index(self.Rake)].affectClass,
+		targets = self.ApplyPowers(powers.makeWeak(weak), affectClass=self.Abilities[self.Callbacks.index(self.Rake)].affectClass,
 						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
@@ -519,8 +517,7 @@ class Louse(monsters.Monster):
 
 	def Spit_Web(self):
 		weak = 2
-		weakPower = powers.Power(timings=powers.TRIGGER.OFFENSE, priority=1, turns=weak, callback=powers.WEAK, AffectDescription=powers.DESCRIPTIONS.WEAK)
-		targets = self.ApplyPowers(weakPower, affectClass=self.Abilities[self.Callbacks.index(self.Spit_Web)].affectClass,
+		targets = self.ApplyPowers(powers.makeWeak(weak), affectClass=self.Abilities[self.Callbacks.index(self.Spit_Web)].affectClass,
 						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])

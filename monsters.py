@@ -1,4 +1,6 @@
-import arena
+# Arena API is not needed for monsters, but single source of RNG is needed
+from arena import global_rng
+# Need access to the entire powers API and all of their enums
 from powers import *
 
 """
@@ -53,7 +55,7 @@ class Monster():
 		self.ID = ID
 		self.Arena = Arena
 		self.Friendlies = Friendlies
-		self.rng = arena.global_rng
+		self.rng = global_rng
 		self.Name, self.Act, self.ascension = "<GenericMonster>", 0, 0
 		self.MaxHealth, self.Health, self.Block = 0, 0, 0
 		self.PowerPool, self.Pattern, self.Abilities, self.Callbacks = [], [], [], []

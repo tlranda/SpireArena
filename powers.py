@@ -1,6 +1,7 @@
 import enum
 """
-	Power Enum for what type of thing sources an effect
+	Sources describe where effects come from in case that matters
+	ie: Thorns only respond to attacks
 """
 class SOURCE(enum.Enum):
 	ATTACK = enum.auto()
@@ -8,6 +9,10 @@ class SOURCE(enum.Enum):
 	POWER = enum.auto()
 	FX = enum.auto()
 
+"""
+	Triggers describe events that occur in the game and can be responded to
+	It's a poor man's listener API because event-driven is hard and I'm dumb
+"""
 class TRIGGER(enum.Enum):
 	OFFENSE = enum.auto()
 	DEFENSE = enum.auto()
@@ -29,6 +34,11 @@ class TRIGGER(enum.Enum):
 	AFTER_ATTACK = enum.auto()
 	AFTER_ATTACK_ED = enum.auto()
 
+"""
+	Just make descriptions a string-Enum so that they're all defined in one place.
+	Technically also makes localization possible but we're unlikely to ever have
+	ppl who want that.
+"""
 class DESCRIPTIONS():
 	WEAK = "Reduce attack damage by 25%"
 	SHACKLES = "Reduce Strength for 1 turn by 1 per stack"
@@ -38,6 +48,13 @@ class DESCRIPTIONS():
 	BLOCK = "Reduce attack damage by 1 per stack, then remove that many stacks"
 
 """
+Revision note for powers:
+	* All powers come in three flavors:
+		+ They stick around forever and have a value that increments/decrements whatever
+		+ They stick around for a set number of turns and the # of turns stacks
+		+ They stick around for exactly 1 turn and the value increments/decrements (often in pairs ie: temporary strength, shackles)
+	So just make these things happen instead
+
 #0 PowerObject (Abstract)
 	Defines an API for events in the fight:
 		* Timing variants for ALL (BEFORE, ON, AFTER) : When to accept the event occurring
@@ -124,37 +141,61 @@ class Power():
 		else:
 			return False
 
-# Implement Powers as callbacks
+# Implement Powers as callbacks, and make API to properly implement the common cases
 # TRIGGER.OFFENSE
 def WEAK(value, affectClass, source, target, *extra):
 	"""
-		Trigger should be TRIGGER.OFFENSE
-		Priority should be 1
-		Value = Outgoing Damage
-		Reduce by 25% (round down)
+		Value = Incoming->Outgoing Damage (Reduced by 25%, round down)
 		Side Effects: None
 	"""
 	return int(value * 0.75)
+def makeWeak(turns):
+	return Power(timings=TRIGGER.OFFENSE, priority=1, turns=turns, callback=WEAK, AffectDescription=DESCRIPTIONS.WEAK)
+
 def SHACKLES(value, affectClass, source, target, *extra):
 	"""
-		TRIGGER should be TRIGGER.OFFENSE
-		Priority should be 2
-		Turns should be 1
-		Value = Outgoing Damage
+		Value = Incoming->Outgoing Damage (reduced by extra[0]--the shackle amount)
 		Extra = ShackleAmount (use negative value for temporary strength but I don't think any monsters have that)
 		Side Effects: None
 	"""
 	return max(0, value-extra[0])
+def makeShackles(strengthDown):
+	def tempCallback(self, addShackles=0):
+		"""
+			Ok so here's maybe how prepared callbacks will work
+			They should default all non-self arguments to whatever effectively does nothing
+			They should return EVERYTHING that needs to be in the *extra for the Affect callback
+			Then all power invocations on Affect() need to include a call to power.Prepare() at the end
+		"""
+		try:
+			self.magic += addShackles
+		except AttributeError:
+			self.magic = addShackles
+		return self.magic
+	shacklesPower = Power(timings=TRIGGER.OFFENSE, priority=2, turns=1, callback=SHACKLES,
+							callback2=tempCallback, AffectDescription=DESCRIPTIONS.SHACKLES)
+	shacklesPower.Prepare(strengthDown)
+	return shacklesPower
+
 def STRENGTH(value, affectClass, source, target, *extra):
 	"""
-		TRIGGER should be TRIGGER.OFFENSE
-		Priority should be 3
-		Turns should be None
-		Value = Outgoing Damage
+		Value = Incoming->Outgoing Damage (increased by extra[0]--strength value)
 		Extra = StrengthAmount
 		Side Effects: None
 	"""
 	return value+extra[0]
+def makeStrength(strength):
+	def tempCallback(self, addStrength=0):
+		try:
+			self.magic += addStrength
+		except AttributeError:
+			self.magic = addStrength
+		return self.magic
+	strengthPower = Power(timings=TRIGGER.OFFENSE, priority=3, turns=None, callback=STRENGTH,
+					callback2=tempCallback, AffectDescription=DESCRIPTIONS.STRENGTH)
+	strengthPower.Prepare(strength)
+	return strengthPower
+
 # TRIGGER.DEFENSE
 def VULNERABLE(value, affectClass, source, target, *extra):
 	"""
@@ -165,6 +206,9 @@ def VULNERABLE(value, affectClass, source, target, *extra):
 		Side Effects: None
 	"""
 	return int(value * 1.5)
+def makeVulnerable(turns):
+	return Power(timings=TRIGGER.OFFENSE, priority=1, turns=turns, callback=WEAK, AffectDescription=DESCRIPTIONS.WEAK)
+
 def INTANGIBLE(value, affectClass, source, target, *extra):
 	"""
 		TRIGGER should be TRIGGER.DEFENSE
