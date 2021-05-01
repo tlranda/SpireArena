@@ -1,4 +1,4 @@
-import arena, powers, monsters
+import powers, monsters
 
 def objects():
 	return {"AcidSlime": AcidSlime,
@@ -7,20 +7,19 @@ def objects():
 	        "Cultist": Cultist,
 	        "Louse": Louse}
 
-"""
-	Known parties:
-		* Acid Slime L
-		* Acid Slime M, Spike Slime S
-		* Acid Slime M, Slaver
-		* Acid Slime M, Cultist
-		* Acid Slime M, Looter
-		* Acid Slime M, Jaw Worm
-		* Acid Slime M, Fungi Beast
-		* Acid Slime S, Spike Slime S, Spike Slime S, Spike Slime S, Acid Slime S
-		* Acid Slime S, Spike Slime M
-"""
-
 class AcidSlime(monsters.Monster):
+	'''
+		Known parties:
+			* Acid Slime L
+			* Acid Slime M, Spike Slime S
+			* Acid Slime M, Slaver
+			* Acid Slime M, Cultist
+			* Acid Slime M, Looter
+			* Acid Slime M, Jaw Worm
+			* Acid Slime M, Fungi Beast
+			* Acid Slime S, Spike Slime S, Spike Slime S, Spike Slime S, Acid Slime S
+			* Acid Slime S, Spike Slime M
+	'''
 	def __init__(self, ID="<TemplateAcidSlime>", Arena=None, Friendlies=None, ascension=0, variant=0):
 		# Ensure proper type
 		ascension, variant = int(ascension), int(variant)
@@ -144,7 +143,6 @@ class AcidSlime(monsters.Monster):
 # work in progress
 
 class Slaver(monsters.Monster):
-
 	'''
 	Known Parties:
 		Act 1:
@@ -159,7 +157,6 @@ class Slaver(monsters.Monster):
 		Act 2:
 			Blue Slaver, Red Slaver, TaskMaster
 	'''
-
 	def __init__(self, ID="<TemplateSlaver>", Arena=None, Friendlies=None, ascension=0, variant=0):
 		# Ensure proper type
 		ascension, variant = int(ascension), int(variant)
@@ -280,7 +277,6 @@ class JawWorm(monsters.Monster):
 		Act 3:
 			Jaw Worm *3
 	'''
-
 	def __init__(self, ID="<TemplateJawWorm>", Arena=None, Friendlies=None, ascension=0, act=0):
 		# Ensure proper type
 		ascension, act = int(ascension), int(act)
@@ -425,9 +421,6 @@ class Cultist(monsters.Monster):
 		"""
 		print(f"{str(self)} uses Incantation to gain Ritual {Ritual}!")
 
-
-
-
 '''
 work in progress
 needs power curl up
@@ -505,14 +498,14 @@ class Louse(monsters.Monster):
 			strength = 4
 		else:
 			strength = 3
-		"""
+		'''
 		# Apply strength to target
 		strengthPower = powers.Power(timings=powers.TRIGGER.OFFENSE, priority=1, turns=None, callback=powers.STRENGTH, AffectDescription=powers.DESCRIPTIONS.STRENGTH)
 		targets = self.ApplyPowers(strengthPower, affectClass=self.Abilities[self.Callbacks.index(self.Grow)].affectClass,
 						ArenaTargets=1, ArenaSelf=True, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=True, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
 						extras=[])
-		"""
+		'''
 		print(f"{str(self)} uses Grow to apply {strength} strength to {[str(monster) for monster in targets]}!!")
 
 	def Spit_Web(self):

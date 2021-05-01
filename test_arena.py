@@ -1,5 +1,5 @@
 # Custom Libraries
-import arena, monsters
+from SpireArenaLib import arena, monsters, settings
 # Builtin Libraries
 from argparse import ArgumentParser as AP
 # Possible Dependencies
@@ -10,6 +10,7 @@ def build():
 	prs.add_argument('-group', type=str, default=[], nargs="+", action="append", required=True, help="Filenames defining monster groups to fight")
 	prs.add_argument('-seed', type=int, default=None, help="Set global RNG seed (default not set--psuedorandom)")
 	prs.add_argument('-max-turns', type=int, default=None, help="Limit turns in each brawl (default None)")
+	prs.add_argument('-no-debug', action='store_true', help="Reduce SpireArenaLib debug output")
 	return prs
 
 def parse(prs, args=None):
@@ -28,6 +29,8 @@ def parse(prs, args=None):
 
 if __name__ == '__main__':
 	args = parse(build())
+	if args.no_debug:
+		settings.ARENA_DEBUG = False
 	# Set seed as necssary
 	if args.seed is not None:
 		arena.global_rng.seed(args.seed)
@@ -35,6 +38,6 @@ if __name__ == '__main__':
 	colliseum = arena.Arena(ID="SpireArena")
 	for combat_group in args.group:
 		with open(combat_group, 'r') as f:
-			monsters.MakeMonsterGroupFromFile(f, colliseum)
+			monsters.makeMonsterGroupFromFile(f, colliseum)
 	winner = colliseum.Brawl(args.max_turns)
 

@@ -1,7 +1,7 @@
-# Arena API is not needed for monsters, but single source of RNG is needed
-from arena import global_rng
-# Need access to the entire powers API and all of their enums
-from powers import *
+# Should not need more than these enums and the makePower call
+from powers import SOURCE, TRIGGER, makePower
+from arena import MonsterGroup, global_rng
+import settings
 
 """
 	TODO:
@@ -60,15 +60,33 @@ class Monster():
 		self.MaxHealth, self.Health, self.Block = 0, 0, 0
 		self.PowerPool, self.Pattern, self.Abilities, self.Callbacks = [], [], [], []
 		self.History, self.HistoryIdx = [], 0
-		self.Alive = True
+		self.Alive = True # Should become a property
 
 	def __str__(self):
 		string = f"{self.Name} {self.ID}"
 		if self.Friendlies is not None:
-			string = f"{str(self.Friendlies)}::{string}"
+			string = f"{self.Friendlies.ID}::{string}"
 		if self.Arena is not None:
-			string = f"{str(self.Arena)}::{string}"
+			string = f"{self.Arena.ID}::{string}"
 		return string
+
+	"""
+		SOMEWHAT DISGUSTING PYTHON BUT HERE'S HOW IT WORKS
+		Actual signature = ChangeEnvironment(self, battlefield, friendly)
+			BUT the arguments aren't required and ONLY the provided ones are used.
+		This means that not passing an argument DOES NOT change that value to None,
+		but passing None as an argument DOES change the value to None
+
+		If you are reading the source and know a better way to achieve this,
+		feel free to submit a pull request
+	"""
+	def ChangeEnvironment(self, **kwargs):
+		if settings.ARENA_DEBUG:
+			print(f"{str(self)} edits environment to reflect new status given by {', '.join([str(k)+':'+str(v) for k,v in zip(kwargs.keys(), kwargs.values())])}")
+		if 'battlefield' in kwargs.keys():
+			self.Arena = kwargs['battlefield']
+		if 'friendly' in kwargs.keys():
+			self.Friendlies = kwargs['friendly']
 
 	def Reset(self):
 		self.Health = self.MaxHealth
@@ -123,13 +141,15 @@ class Monster():
 				  f"{[self.Callbacks[self.History[(self.HistoryIdx-_)%2]].__name__ for _ in range(len(self.History),0,-1)]}")
 			"""
 			move.callback()
-		else:
+		elif settings.ARENA_DEBUG:
 			print(f"{str(self)} is dead. Skipping turn")
 
-	def Empower(self, value, source_class, *trigger_classes, source, target, extras=[]):
+	def Empower(self, value, source_class, *trigger_classes, source, target, extras=None):
 		"""
 			Alter value using self.PowerPool based on trigger_class and source_class
 		"""
+		if extras is None:
+			extras = list()
 		powerQueue = []
 		for power in self.PowerPool:
 			for trigger in trigger_classes:
@@ -140,8 +160,11 @@ class Monster():
 		powerQueue = sorted(powerQueue, key=lambda x: x.priority, reverse=True)
 		# Activate powers
 		for power in powerQueue:
+			if settings.ARENA_DEBUG:
+				print("\t"+f"{str(self)} triggers power {power}")
 			new_value = power.Affect(value, source_class, source, target, extras)
-			print("\t"+f"{str(self)}'s {power} updates value from {value} to {new_value}")
+			if settings.ARENA_DEBUG:
+				print("\t"+f"{str(self)}'s {power} updates value from {value} to {new_value}")
 			value = new_value
 		return value
 
@@ -184,13 +207,15 @@ class Monster():
 	def ApplyPowers(self, *powers, affectClass=SOURCE.SKILL,
 				ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
-				extras=[]):
+				extras=None):
 		"""
 			CALL FROM THE OBJECT APPLYING THE POWERS
 			powers = list of Power objects to add to the target Objects
 			affectClass is enum for ATTACK/POWER/SKILL/FX to determine if this application triggers any other powers
 			others specify how to locate targets for the power application
 		"""
+		if extras is None:
+			extras = list()
 		targets = self.Select(ArenaTargets=ArenaTargets, ArenaSelf=ArenaSelf, ArenaAll=ArenaAll,
 				GroupTargets=GroupTargets, GroupOnlySelf=GroupOnlySelf, GroupIncludeSelf=GroupIncludeSelf, GroupAll=GroupAll, GroupCheckAlive=GroupCheckAlive)
 		enemies = self.Select(ArenaTargets=1, ArenaSelf=False, ArenaAll=True,
@@ -218,7 +243,7 @@ class Monster():
 	def Damage(self, *amounts, empowerDamage=True, affectClass=SOURCE.ATTACK,
 				ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
-				extras=[]):
+				extras=None):
 		"""
 			CALL FROM THE OBJECT DEALING THE DAMAGES
 			amounts = list of damage values to produce (affected by powers)
@@ -226,6 +251,8 @@ class Monster():
 			affectClass is enum for ATTACK/POWER/SKILL/FX to determine if powers interact differently
 			others specify how to locate targets for the damage instance
 		"""
+		if extras is None:
+			extras = list()
 		targets = self.Select(ArenaTargets=ArenaTargets, ArenaSelf=ArenaSelf, ArenaAll=ArenaAll,
 				GroupTargets=GroupTargets, GroupOnlySelf=GroupOnlySelf, GroupIncludeSelf=GroupIncludeSelf, GroupAll=GroupAll, GroupCheckAlive=GroupCheckAlive)
 		# Iteratively perform damage
@@ -277,7 +304,7 @@ class Monster():
 			self.Abilities.append(MonsterMove(*move))
 
 # Routine to contruct monsters based on one-line, space-delimited strings
-def MakeMonsterFromString(string, battlefield=None, monsterGroup=None):
+def makeMonsterFromString(string, battlefield=None, monsterGroup=None):
 	line = string.rstrip().split()
 	monsterType = line[0]
 	monsterMaker = {'ID': line[1],
@@ -289,12 +316,12 @@ def MakeMonsterFromString(string, battlefield=None, monsterGroup=None):
 
 # Routine to create monster groups from a text file (1-monster-per-line), with static default group counting
 num_groups = 0
-def MakeMonsterGroupFromFile(fh, battlefield, ID=None):
+def makeMonsterGroupFromFile(fh, battlefield=None, ID=None):
 	if ID is None:
 		global num_groups
 		ID = f"Group_{num_groups}"
 		num_groups += 1
-	monsterGroup = arena.MonsterGroup(monsters=[], ID=ID)
+	monsterGroup = MonsterGroup(ID=ID)
 	for line in fh.readlines():
 		"""
 			File format:
@@ -305,8 +332,9 @@ def MakeMonsterGroupFromFile(fh, battlefield, ID=None):
 				Beyond that should be pairs of elements such that the first is the keyword and the second is the value
 					Class Constructors are required to properly convert strings to the intended data type for such inputs
 		"""
-		monsterGroup.AddMonster(MakeMonsterFromString(line, battlefield, monsterGroup), ephemeral=False)
-	battlefield.AddGroups(monsterGroup)
+		monsterGroup.AddMonsters(False, makeMonsterFromString(line, battlefield, monsterGroup))
+	if battlefield is not None:
+		battlefield.AddGroups(monsterGroup)
 	return monsterGroup
 
 # Routine to locate a monster constructor from any act based on the monster name
@@ -320,6 +348,6 @@ objects.update(a1.objects())
 #objects.update(a3.objects())
 #import act_4_monsters as a4
 #objects.update(a4.objects())
-def makeMonster(Type, **kwargs):
-	return objects[Type](**kwargs)
+def makeMonster(MonsterType, **kwargs):
+	return objects[MonsterType](**kwargs)
 

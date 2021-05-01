@@ -18,6 +18,19 @@ class TRIGGER(enum.Enum):
 	DEFENSE = enum.auto()
 	ON_DEATH = enum.auto()
 		# Should have default that logs death and decrements friendly group's fight_on
+		# Because darkling slimes exist, on death should also kill MOST other powers
+		# but powers should have a (default on) field indicating that they get removed
+		# with the on-death call. any power turning that off should be VERY intentional
+		# about it
+	"""
+	Solution to Darkling Nonsense:
+		Unlimited turn power with ON_DEATH trigger that CREATES and ASSIGNS a new
+		countdown timer and another TRIGGER.
+		The timer is just the 3-turn (or whatever length) timer and doesn't actually do
+		anything other than tick down per turn.
+		The TRIGGER power is an ON_POWER_LOSE looking for that timer expiring, and calls
+		the darkling slime's half-rez ability
+	"""
 	ON_KILL = enum.auto()
 	ON_ATTACK = enum.auto()
 	VS_ATTACK = enum.auto()
@@ -35,9 +48,13 @@ class TRIGGER(enum.Enum):
 	AFTER_ATTACK_ED = enum.auto()
 
 """
+	FOR INTERNAL USE (THIS FILE) ONLY
+
 	Just make descriptions a string-Enum so that they're all defined in one place.
 	Technically also makes localization possible but we're unlikely to ever have
 	ppl who want that.
+	But the localization angle is why this isn't a dictionary... eventually this
+	should load from pickle files or something
 """
 class DESCRIPTIONS():
 	WEAK = "Reduce attack damage by 25%"
@@ -56,6 +73,8 @@ Revision note for powers:
 	So just make these things happen instead
 
 #0 PowerObject (Abstract)
+	SHOULD ONLY BE USED INTERNALLY BY THIS FILE--USE makePower() TO INSTANCE POWER OBJECTS EXTERNALLY
+
 	Defines an API for events in the fight:
 		* Timing variants for ALL (BEFORE, ON, AFTER) : When to accept the event occurring
 	Instanceable Examples of Enum classes
@@ -81,6 +100,7 @@ Revision note for powers:
 		turns : Int (turns to live) or None (permanent)
 		priority : Int (higher # == higher priority)
 		triggers : List of POWER classes to activate on
+		removeOnDeath : Bool
 	METHODS:
 		Affect(value, cardtype, owner, target, *extra) : Implements the callback for the effect; returns value as it should be affected while applying side affects to owner and target
 		Prepare(*extra) : Prepares the next Affect call (optional)
@@ -98,7 +118,7 @@ class Power():
 
 		TurnTick should be called at the end of every turn on all powers for everything, decrements powers as needed. Returns True when the power should be eliminated
 	"""
-	def __init__(self, timings, priority, turns, callback, callback2=None, PrepareDescription=None, AffectDescription=None):
+	def __init__(self, timings, priority, turns, callback, callback2=None, PrepareDescription=None, AffectDescription=None, removeOnDeath=True):
 		if type(timings) is not list:
 			try:
 				timings = list(timings)
@@ -107,6 +127,7 @@ class Power():
 		self.triggers = timings
 		self.priority = priority
 		self.turns = turns
+		self.removeOnDeath = removeOnDeath
 		self.PrepareDescription = PrepareDescription
 		self.AffectDescription = AffectDescription
 		self.Affect = callback
@@ -218,6 +239,9 @@ def INTANGIBLE(value, affectClass, source, target, *extra):
 		Side Effects: None
 	"""
 	return min(value, 1)
+def makeIntangible(turns):
+	return Power(timings=TRIGGER.DEFENSE, priority=2, turns=turns, callback=INTANGIBLE, AffectDescription=DESCRIPTIONS.INTANGIBLE)
+
 def BLOCK(value, affectClass, source, target, *extra):
 	"""
 		TRIGGER should be TRIGGER.DEFENSE
@@ -231,3 +255,16 @@ def BLOCK(value, affectClass, source, target, *extra):
 	value -= blocked_damage
 	target.Block = available_block - blocked_damage
 	return value
+def makeBlock(amt):
+	return Power(timings=TRIGGER.DEFENSE, priority=2, turns=None, callback=BLOCK, AffectDescription=DESCRIPTIONS.BLOCK)
+
+powerDict = {	'weak': makeWeak,
+				'shackles': makeShackles,
+				'strength': makeStrength,
+				'vulnerable': makeVulnerable,
+				'intangible': makeIntangible,
+				'block': makeBlock,
+			}
+def makePower(powerName, *powerValues):
+	return PowerDict[powerName](*powerValues)
+
