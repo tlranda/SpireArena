@@ -1,6 +1,8 @@
 #!/usr/env/python3
 import SpireArenaLib as SAL
 from time import perf_counter as clock
+# Manually set seed for consistency in testing
+SAL.settings.global_rng.seed(12345)
 
 """
 	Demonstrates usage patterns while also functioning

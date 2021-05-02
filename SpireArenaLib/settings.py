@@ -1,5 +1,8 @@
-import enum
+import enum, random
 from functools import total_ordering
+
+# This is the ONLY rng source that should be used in Arena code--implementers can use their own RNG separately
+global_rng = random.Random()
 
 @total_ordering
 class DEBUG(enum.Enum):

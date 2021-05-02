@@ -1,6 +1,6 @@
 # Should not need more than these enums and the makePower call
 from powers import SOURCE, TRIGGER, makePower
-from arena import MonsterGroup, global_rng
+from arena import MonsterGroup
 import settings
 
 """
@@ -55,7 +55,7 @@ class Monster():
 		self.ID = ID
 		self.Arena = Arena
 		self.Friendlies = Friendlies
-		self.rng = global_rng
+		self.rng = settings.global_rng
 		self.Name, self.Act, self.ascension = "<GenericMonster>", 0, 0
 		self.MaxHealth, self.Health, self.Block = 0, 0, 0
 		self.Pattern, self.Abilities, self.Callbacks = [], [], []

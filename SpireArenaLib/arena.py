@@ -1,9 +1,6 @@
 # Slay the Spire Arena: Pit mobs vs one another and fight it out to the death!
-import random
-# This is the ONLY rng source that should be used in Arena code--implementers can use their own RNG separately
-global_rng = random.Random()
 from copy import deepcopy as dcpy
-# Globally controls debug output and perhaps other things in the future
+# Globally controls RNG, debug output and perhaps other things in the future
 import settings
 
 """
@@ -177,8 +174,7 @@ class Arena():
 			groups = list()
 		self.ID = ID
 		self.turn = 0
-		global global_rng
-		self.rng = global_rng
+		self.rng = settings.global_rng
 		self.groups = []
 		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"Creating{' empty' if groups == [] else ''} arena {ID}{' with Groups '+', '.join([str(g) for g in groups]) if groups != [] else ''}")

@@ -32,7 +32,7 @@ if __name__ == '__main__':
 	settings.ARENA_DEBUG = settings.debug_names[args.debug]
 	# Set seed as necssary
 	if args.seed is not None:
-		arena.global_rng.seed(args.seed)
+		settings.global_rng.seed(args.seed)
 	# Make groups
 	colliseum = arena.Arena(ID="SpireArena")
 	for combat_group in args.group:
