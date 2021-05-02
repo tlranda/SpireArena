@@ -58,7 +58,8 @@ class Monster():
 		self.rng = global_rng
 		self.Name, self.Act, self.ascension = "<GenericMonster>", 0, 0
 		self.MaxHealth, self.Health, self.Block = 0, 0, 0
-		self.PowerPool, self.Pattern, self.Abilities, self.Callbacks = [], [], [], []
+		self.Pattern, self.Abilities, self.Callbacks = [], [], []
+		self.PowerPool = [makePower('block')]
 		self.History, self.HistoryIdx = [], 0
 		self.Alive = True # Should become a property
 
@@ -91,7 +92,7 @@ class Monster():
 	def Reset(self):
 		self.Health = self.MaxHealth
 		self.Alive = True
-		self.PowerPool = []
+		self.PowerPool = [makePower('block')]
 		self.History = []
 		self.HistoryIdx = 0
 		if not self.Alive and self.Friendlies is not None:
@@ -103,7 +104,14 @@ class Monster():
 		"""
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{self.Name}'s move is not overridden by template class's SpecialIntent()")
-		return moveCall, moveAlternatives, moveChances
+		return moveCall
+
+	def makeMoves(self, *move_tuples):
+		self.Callbacks = []
+		self.Abilities = []
+		for move in move_tuples:
+			self.Callbacks.append(move[1])
+			self.Abilities.append(MonsterMove(*move))
 
 	def MoveSelect(self, move=None):
 		"""
@@ -165,14 +173,19 @@ class Monster():
 			value = new_value
 		return value
 
-	def Select(self, ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
+	def Select(self, ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
 				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True):
 		"""
 			Use generator functions Affect() to get monsters affected and for each damage instance, run it through all participants relevant powers
 			after the affect, run through both targets post powers based on the ultimate outcome
 		"""
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
+			nlt="\n\t"
+			print(f"Select args:{nlt}{nlt.join([key+':'+str(arg) for key,arg in zip(['ArenaTargets', 'ArenaOnlySelf', 'ArenaIncludeSelf', 'ArenaAll', 'GroupTargets', 'GroupOnlySelf', 'GroupIncludeSelf', 'GroupAll', 'GroupCheckAlive'],[ArenaTargets, ArenaOnlySelf, ArenaIncludeSelf, ArenaAll, GroupTargets, GroupOnlySelf, GroupIncludeSelf, GroupAll, GroupCheckAlive])])}")
 		# Get all the candidate groups
-		arenaGroups = [[val for val in self.Arena.Affect(self.Friendlies, IncludeSelf=ArenaSelf, All=ArenaAll)] for _ in range(ArenaTargets)]
+		arenaGroups = [[val for val in self.Arena.Affect(self.Friendlies, OnlySelf=ArenaOnlySelf, IncludeSelf=ArenaIncludeSelf, All=ArenaAll)] for _ in range(ArenaTargets)]
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
+			print(f"Select Candidate Groups = {','.join([', '.join([str(g) for g in ag[1:]]) for ag in arenaGroups])}")
 		# Determine number of targets to pick
 		maxTargeted = sum([_[0] for _ in arenaGroups])
 		if ArenaTargets is not None:
@@ -184,9 +197,13 @@ class Monster():
 		if ArenaTargets is not None:
 			# Randomly target groups up to the number of targets
 			targetedGroups = self.rng.choices(targetedGroups, k=ArenaTargets)
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
+			print(f"Selected Groups = {','.join([str(g) for g in targetedGroups])}")
 
 		# Now select group targets in each group
 		monsterGroups = [[val for val in group.Affect(self, GroupOnlySelf, GroupIncludeSelf, GroupAll, GroupCheckAlive)] for group in targetedGroups]
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
+			print(f"Select Candidate Monsters = {','.join([','.join([str(g) for g in mg[1:]]) for mg in monsterGroups])}")
 		# Refine number of targets to pick
 		maxTargeted = sum([_[0] for _ in monsterGroups])
 		if GroupTargets is not None:
@@ -202,7 +219,7 @@ class Monster():
 		return targetedMonsters
 
 	def ApplyPowers(self, *powers, affectClass=SOURCE.SKILL,
-				ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
+				ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
 				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
 				extras=None):
 		"""
@@ -213,9 +230,9 @@ class Monster():
 		"""
 		if extras is None:
 			extras = list()
-		targets = self.Select(ArenaTargets=ArenaTargets, ArenaSelf=ArenaSelf, ArenaAll=ArenaAll,
+		targets = self.Select(ArenaTargets=ArenaTargets, ArenaOnlySelf=ArenaOnlySelf, ArenaIncludeSelf=ArenaIncludeSelf, ArenaAll=ArenaAll,
 				GroupTargets=GroupTargets, GroupOnlySelf=GroupOnlySelf, GroupIncludeSelf=GroupIncludeSelf, GroupAll=GroupAll, GroupCheckAlive=GroupCheckAlive)
-		enemies = self.Select(ArenaTargets=1, ArenaSelf=False, ArenaAll=True,
+		enemies = self.Select(ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=True,
 				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=GroupCheckAlive)
 		Powers = [[TRIGGER.ON_POWER_GAIN], [TRIGGER.VS_POWER_GAIN]]
 		# Iteratively push powers but push them all at once to allow multipower applications to count as one for power trigger reasons
@@ -229,7 +246,7 @@ class Monster():
 					enemy.Empower(powers, affectClass, *Powers[1], source=self, target=self, extras=extras)
 			else:
 				target.Empower(powers, affectClass, *Powers[0], source=self, target=target, extras=extras)
-				targets_enemies = target.Select(ArenaTargets=1, ArenaSelf=False, ArenaAll=True,
+				targets_enemies = target.Select(ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=True,
 								GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=GroupCheckAlive)
 				for target_enemy in targets_enemies:
 					# Allies of the target and the target itself don't get VS triggers
@@ -237,8 +254,53 @@ class Monster():
 		# Return targets for logging
 		return targets
 
+	def GainBlock(self, *amounts, empowerBlock=True, affectClass=SOURCE.SKILL,
+				ArenaTargets=1, ArenaOnlySelf=True, ArenaIncludeSelf=True, ArenaAll=False,
+				GroupTargets=1, GroupOnlySelf=True, GroupIncludeSelf=True, GroupAll=False, GroupCheckAlive=True,
+				extras=None):
+		"""
+			CALL FROM THE OBJECT APPLYING THE BLOCK
+			amounts = list of raw block values to produce (affected by powers)
+			empowerBLock determines if powers apply to the block gain (either both ways or no ways)
+			affectClass is enum for ATTACK/POWER/SKILL/FX to determine if powers interact differently
+			others specify how to locate targets for the damage instance
+		"""
+		if extras is None:
+			extras = list()
+		targets = self.Select(ArenaTargets=ArenaTargets, ArenaOnlySelf=ArenaOnlySelf, ArenaIncludeSelf=ArenaIncludeSelf, ArenaAll=ArenaAll,
+				GroupTargets=GroupTargets, GroupOnlySelf=GroupOnlySelf, GroupIncludeSelf=GroupIncludeSelf, GroupAll=GroupAll, GroupCheckAlive=GroupCheckAlive)
+		applied = []
+		# Iteratively gain block
+		for block in amounts:
+			applied.append(0)
+			if self.Alive:
+				for target in targets:
+					if empowerBlock:
+						Powers = [[TRIGGER.DEFENSE], [TRIGGER.DEFENSE]]
+						if affectClass == SOURCE.ATTACK:
+							Powers[0].append(TRIGGER.ON_ATTACK)
+							#Powers[1].append(TRIGGER.VS_ATTACK)
+						if affectClass == SOURCE.SKILL:
+							Powers[0].append(TRIGGER.ON_SKILL)
+							Powers[1].append(TRIGGER.VS_SKILL)
+						elif affectClass == SOURCE.TRIGGER:
+							Powers[0].append(TRIGGER.ON_POWER_GAIN)
+							Powers[1].append(TRIGGER.VS_POWER_GAIN)
+						# First you get to empower your block
+						block = self.Empower(block, affectClass, *Powers[0], source=self, target=target, extras=extras)
+						# Then the target empowers the block
+						block = target.Empower(block, affectClass, *Powers[1], source=self, target=target, extras=extras)
+					# Now that block has been affected and side effects taken care of by powers, apply the block
+					# Anything less than 0 block is 0 block
+					block = max(0, block)
+					target.Block += block
+					applied[-1] += block
+					# There should not be post-block powers to apply
+		# Return block applied for logging
+		return applied, targets
+
 	def Damage(self, *amounts, empowerDamage=True, affectClass=SOURCE.ATTACK,
-				ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
+				ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
 				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
 				extras=None):
 		"""
@@ -250,7 +312,7 @@ class Monster():
 		"""
 		if extras is None:
 			extras = list()
-		targets = self.Select(ArenaTargets=ArenaTargets, ArenaSelf=ArenaSelf, ArenaAll=ArenaAll,
+		targets = self.Select(ArenaTargets=ArenaTargets, ArenaOnlySelf=ArenaOnlySelf, ArenaIncludeSelf=ArenaIncludeSelf, ArenaAll=ArenaAll,
 				GroupTargets=GroupTargets, GroupOnlySelf=GroupOnlySelf, GroupIncludeSelf=GroupIncludeSelf, GroupAll=GroupAll, GroupCheckAlive=GroupCheckAlive)
 		# Iteratively perform damage
 		dealt = []
@@ -292,13 +354,6 @@ class Monster():
 					target.Empower(damage, affectClass, *Powers[1], source=self, target=target, extras=extras)
 		# Return damage dealt for logging
 		return dealt, targets
-
-	def makeMoves(self, *move_tuples):
-		self.Callbacks = []
-		self.Abilities = []
-		for move in move_tuples:
-			self.Callbacks.append(move[1])
-			self.Abilities.append(MonsterMove(*move))
 
 # Routine to contruct monsters based on one-line, space-delimited strings
 def makeMonsterFromString(string, battlefield=None, monsterGroup=None):

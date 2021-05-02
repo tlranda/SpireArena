@@ -1,4 +1,4 @@
-import enum
+import enum, settings
 """
 	Sources describe where effects come from in case that matters
 	ie: Thorns only respond to attacks
@@ -250,12 +250,14 @@ def BLOCK(value, affectClass, source, target, *extra):
 		Value = Outgoing Damage
 		Side Effects: Reduce BlockAmount in target by blocked amount
 	"""
+	if settings.DEBUG.full == settings.ARENA_DEBUG:
+		print(f"{str(source)} sends {value}, {str(target)} has {target.Block}")
 	available_block = target.Block
 	blocked_damage = min(value, available_block)
 	value -= blocked_damage
 	target.Block = available_block - blocked_damage
 	return value
-def makeBlock(amt):
+def makeBlock():
 	return Power(timings=TRIGGER.DEFENSE, priority=2, turns=None, callback=BLOCK, AffectDescription=DESCRIPTIONS.BLOCK)
 
 powerDict = {	'weak': makeWeak,
@@ -266,5 +268,5 @@ powerDict = {	'weak': makeWeak,
 				'block': makeBlock,
 			}
 def makePower(powerName, *powerValues):
-	return PowerDict[powerName](*powerValues)
+	return powerDict[powerName](*powerValues)
 

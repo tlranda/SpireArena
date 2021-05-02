@@ -339,10 +339,10 @@ class JawWorm(monsters.Monster):
 		damage = 7
 		block = 5
 		# Deal damage and gains block
-		#block = self.GainBlock(block)
 		dealt, targets = self.Damage(damage)
+		barrier, targets = self.GainBlock(block)
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
-			print(f"{str(self)} uses Thrash to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you and gains {block} block!")
+			print(f"{str(self)} uses Thrash to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you and gains RAW_INTENT:{block} --> ACTUAL:{barrier} block!")
 
 	def Bellow(self):
 		block = 6

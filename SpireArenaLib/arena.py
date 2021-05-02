@@ -167,7 +167,7 @@ class MonsterGroup():
 		* RemoveGroups(*MonsterGroup) : Remove some # of groups of monsters from the fight
 		* Reset() : Respawn all monsters in all groups
 		* Turn() : Execute a turn of combat
-		* Affect(MonsterGroup, IncludeSelf, All) : Generator for included MonsterGroups.
+		* Affect(MonsterGroup, OnlySelf, IncludeSelf, All) : Generator for included MonsterGroups.
 				Only includes the self-group if IncludeSelf is True, only affects one group at random unless All is True
 		* Brawl(turn_limit=None) : Fight all groups to the death or turn limit, returns surviving groups
 """
@@ -229,8 +229,10 @@ class Arena():
 			group.Turn()
 		self.turn += 1
 
-	def Affect(self, Friendlies, IncludeSelf=False, All=False):
-		if not IncludeSelf:
+	def Affect(self, Friendlies, OnlySelf=False, IncludeSelf=False, All=False):
+		if OnlySelf:
+			groups = [_ for _ in self.groups if _ == Friendlies]
+		elif not IncludeSelf:
 			groups = [_ for _ in self.groups if _ != Friendlies]
 		else:
 			groups = dcpy(self.groups)
