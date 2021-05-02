@@ -18,10 +18,12 @@ STRUCTURE:
 
 Design TODO:
 * Implementing statuses and how they interact with monster intents
-* Add a block parameter to abstract monsters
 * Default monster powers:
-	* Start of Turn: Lose all block unless you have the Barrier power
 	* On death: Announce death, mark dead in group
+* Frail, Thorns, Strength/Shackles
+* For artifact tags to work, one of two things:
+	* Assume that enemies do not buff one another and artifact prevents incoming power, but friendlies buff so allow incoming power
+	* Rework power class to have buff/debuff tags to guarantee the artifact charges work as intended
 
 Labor TODO:
 * Implementing powers/monsters from the game

@@ -46,6 +46,7 @@ class TRIGGER(enum.Enum):
 	VS_HP_REDUCE = enum.auto()
 	AFTER_ATTACK = enum.auto()
 	AFTER_ATTACK_ED = enum.auto()
+	TURN_START = enum.auto()
 
 """
 	FOR INTERNAL USE (THIS FILE) ONLY
@@ -63,6 +64,8 @@ class DESCRIPTIONS():
 	VULNERABLE = "Increase attack damage by 50%"
 	INTANGIBLE = "Reduce attack damage to 1"
 	BLOCK = "Reduce attack damage by 1 per stack, then remove that many stacks"
+	BARRICADE = "Block is not removed at the start of turns"
+	BLOCK_LOSS_TURN_START = "Block is removed at the start of turns"
 
 """
 Revision note for powers:
@@ -260,12 +263,39 @@ def BLOCK(value, affectClass, source, target, *extra):
 def makeBlock():
 	return Power(timings=TRIGGER.DEFENSE, priority=2, turns=None, callback=BLOCK, AffectDescription=DESCRIPTIONS.BLOCK)
 
+# Some powers only need to be present, they don't do anything themselves but their presence affects how other powers work
+# Supply integer number of turns to make this functionally operate as blur
+def makeBarricade(turns=None):
+	timing = list()
+	return Power(timings=timing, priority=0, turns=turns, callback=None, AffectDescription=DESCRIPTIONS.BARRICADE)
+# The power that cares about barricade existing -- a trigger to remove block at the start of each turn
+def BLOCK_LOSS_TURN_START(value, affectClass, source, target, *extra):
+	"""
+		TRIGGER should be TRIGGER.TURN_START
+		Priority should be 0
+		Turns should be None (always on, checks for barricades on source)
+		Side Effects: Reduces block to 0 if no Barricade present
+	"""
+	barricade = False
+	for power in source.PowerPool:
+		if power.AffectDescription == DESCRIPTIONS.BARRICADE:
+			barricade = True
+	if settings.DEBUG.full == settings.ARENA_DEBUG:
+		print(f"{str(source)} has {source.Block} at start of turn and {'does not have' if not barricade else 'has'} barricade")
+	if not barricade:
+		source.Block = 0
+	return not barricade
+def makeBlockLossEachTurn():
+	return Power(timings=TRIGGER.TURN_START, priority=0, turns=None, callback=BLOCK_LOSS_TURN_START, AffectDescription=DESCRIPTIONS.BLOCK_LOSS_TURN_START)
+
 powerDict = {	'weak': makeWeak,
 				'shackles': makeShackles,
 				'strength': makeStrength,
 				'vulnerable': makeVulnerable,
 				'intangible': makeIntangible,
 				'block': makeBlock,
+				'barricade': makeBarricade,
+				'blockLossEachTurn': makeBlockLossEachTurn,
 			}
 def makePower(powerName, *powerValues):
 	return powerDict[powerName](*powerValues)

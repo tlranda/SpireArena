@@ -59,7 +59,7 @@ class Monster():
 		self.Name, self.Act, self.ascension = "<GenericMonster>", 0, 0
 		self.MaxHealth, self.Health, self.Block = 0, 0, 0
 		self.Pattern, self.Abilities, self.Callbacks = [], [], []
-		self.PowerPool = [makePower('block')]
+		self.PowerPool = [makePower('block'), makePower('blockLossEachTurn')]
 		self.History, self.HistoryIdx = [], 0
 		self.Alive = True # Should become a property
 
@@ -92,7 +92,7 @@ class Monster():
 	def Reset(self):
 		self.Health = self.MaxHealth
 		self.Alive = True
-		self.PowerPool = [makePower('block')]
+		self.PowerPool = [makePower('block'), makePower('blockLossEachTurn')]
 		self.History = []
 		self.HistoryIdx = 0
 		if not self.Alive and self.Friendlies is not None:
@@ -144,6 +144,8 @@ class Monster():
 
 	def Turn(self, move=None):
 		if self.Alive:
+			# Trigger turn start effects
+			self.Empower(None, SOURCE.FX, TRIGGER.TURN_START, source=self, target=None, extras=None)
 			move = self.MoveSelect(move)
 			move.callback()
 		elif settings.DEBUG.full == settings.ARENA_DEBUG:

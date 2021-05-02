@@ -14,7 +14,7 @@ SAL.settings.global_rng.seed(12345)
 from argparse import ArgumentParser as AP
 def build():
 	prs = AP()
-	testIDs = [0,1,2]
+	testIDs = [0,1,2,3]
 	prs.add_argument("testID", type=int, choices=testIDs, help=f"Test to perform amongst {testIDs}")
 	prs.add_argument('-debug', default=SAL.settings.ARENA_DEBUG, choices=list(SAL.settings.debug_names.keys()), help=f"Debug output level (default: {SAL.settings.reverse_debug_names[SAL.settings.ARENA_DEBUG]})")
 	prs.add_argument("-turns", "-max-turns", type=int, default=1, help="Turns to demonstrate (default 1)")
@@ -74,24 +74,30 @@ if __name__ == '__main__':
 		field = SAL.Arena(ID='BlockArena', groups=[SAL.MonsterGroup(ID="GroupA", monsters=monster_pool[:1]),
 												   SAL.MonsterGroup(ID="GroupB", monsters=monster_pool[1:])])
 		# Manually invoke Thrash to test behavior:
-		"""
-		print(f"--MANUAL CONTROL--")
-		thrashIndex = jawWorm.Callbacks.index(jawWorm.Thrash)
-		print(f"Index {type(thrashIndex)} = {thrashIndex}")
-		ability = jawWorm.Abilities[thrashIndex]
-		print(f"Ability {type(ability)} = {ability}")
-		move = jawWorm.MoveSelect(ability)
-		print(f"Move {type(move)} = {move}")
-		"""
-		move = jawWorm.MoveSelect(jawWorm.Abilities[jawWorm.Callbacks.index(jawWorm.Thrash)])
-		move.callback()
-		#print(f"Move performed")
-		#print(f"JawWorm powers = {jawWorm.PowerPool}")
+		move = jawWorm.Abilities[jawWorm.Callbacks.index(jawWorm.Thrash)]
+		jawWorm.Turn(move)
 		# Manually invoke a damaging attack to test block:
-		acidSlime.MoveSelect(acidSlime.Abilities[acidSlime.Callbacks.index(acidSlime.Tackle)]).callback()
-		acidSlime.MoveSelect(acidSlime.Abilities[acidSlime.Callbacks.index(acidSlime.Tackle)]).callback()
-		acidSlime.MoveSelect(acidSlime.Abilities[acidSlime.Callbacks.index(acidSlime.Tackle)]).callback()
-		acidSlime.MoveSelect(acidSlime.Abilities[acidSlime.Callbacks.index(acidSlime.Tackle)]).callback()
+		move = acidSlime.Abilities[acidSlime.Callbacks.index(acidSlime.Tackle)]
+		acidSlime.Turn(move)
+		acidSlime.Turn(move)
+		acidSlime.Turn(move)
+		acidSlime.Turn(move)
+	elif test == 3:
+		"""
+			Demonstrate that block is lost at the start of each turn by forcing a Jaw Worm to use Thrash over multiple turns
+		"""
+		monster_pool = [SAL.makeMonster(**{'MonsterType': mType, 'ID': f'{mType}{str(uid)}'}) for mType, uid in zip(['JawWorm', 'AcidSlime'], range(1,3))]
+		jawWorm, acidSlime = monster_pool
+		field = SAL.Arena(ID='BlockArena', groups=[SAL.MonsterGroup(ID="GroupA", monsters=monster_pool[:1]),
+												   SAL.MonsterGroup(ID="GroupB", monsters=monster_pool[1:])])
+		# Manually invoke Thrash to test behavior:
+		move = jawWorm.Abilities[jawWorm.Callbacks.index(jawWorm.Thrash)]
+		jawWorm.Turn(move)
+		print(f"JawWorm has {jawWorm.Block} block after turn 1")
+		jawWorm.Turn(move)
+		print(f"JawWorm has {jawWorm.Block} block after turn 2")
+		jawWorm.Turn(move)
+		print(f"JawWorm has {jawWorm.Block} block after turn 3")
 	else:
 		raise ValueError(f"test has value {test}, valid values are {VALID_VALUES}")
 	demo(field, args.turns)

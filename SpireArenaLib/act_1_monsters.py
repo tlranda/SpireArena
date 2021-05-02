@@ -354,8 +354,10 @@ class JawWorm(monsters.Monster):
 		else:
 			strength = 3
 		# Gains strength and block
+		# create or update a strength instance
+		barrier, targets = self.GainBlock(block)
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
-			print(f"{str(self)} uses Bellow to gain {strength} and {block} block!")
+			print(f"{str(self)} uses Bellow to gain {strength} and RAW_INTENT:{block} --> ACTUAL:{barrier} block!")
 
 
 '''
@@ -476,13 +478,18 @@ class Louse(monsters.Monster):
 			self.Pattern = [0.75, 0, 0.25]
 
 		# Powers
-		# self.PowerPool.append(Power(Curl Up)) # stops target from attacking for one turn]
+		# self.PowerPool.append(Power(Curl Up)) # gain block after surviving hp loss
 		# Ascend the mortal form
 		self.ascension = ascension
 		if ascension > 0:
 			self.Ascend(ascension)
 		# Call Reset to propagate everything properly
 		self.Reset()
+
+	def Reset(self):
+		super().Reset()
+		# Ensure curl up is available after resetting
+		# self.PowerPool.append(Power(Curl Up))
 
 	def Ascend(self, ascension):
 		if self.ascension < 7 and ascension >= 7:
