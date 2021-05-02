@@ -87,6 +87,9 @@ if __name__ == '__main__':
 		#print(f"JawWorm powers = {jawWorm.PowerPool}")
 		# Manually invoke a damaging attack to test block:
 		acidSlime.MoveSelect(acidSlime.Abilities[acidSlime.Callbacks.index(acidSlime.Tackle)]).callback()
+		acidSlime.MoveSelect(acidSlime.Abilities[acidSlime.Callbacks.index(acidSlime.Tackle)]).callback()
+		acidSlime.MoveSelect(acidSlime.Abilities[acidSlime.Callbacks.index(acidSlime.Tackle)]).callback()
+		acidSlime.MoveSelect(acidSlime.Abilities[acidSlime.Callbacks.index(acidSlime.Tackle)]).callback()
 	else:
 		raise ValueError(f"test has value {test}, valid values are {VALID_VALUES}")
 	demo(field, args.turns)

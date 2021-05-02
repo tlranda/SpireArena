@@ -112,7 +112,7 @@ class AcidSlime(monsters.Monster):
 			weak = 1
 		# Apply weak to target
 		targets = self.ApplyPowers(powers.makeWeak(weak), affectClass=self.Abilities[self.Callbacks.index(self.Lick)].affectClass,
-						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
+						ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
@@ -234,7 +234,7 @@ class Slaver(monsters.Monster):
 		dealt, targets = self.Damage(damage)
 		# Apply weak to target
 		targets = self.ApplyPowers(powers.makeWeak(weak), affectClass=self.Abilities[self.Callbacks.index(self.Rake)].affectClass,
-						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
+						ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
@@ -255,7 +255,7 @@ class Slaver(monsters.Monster):
 		#Applies Vulnerable
 		vulnerablePower = powers.Power(timings=powers.TRIGGER.DEFENSE, priority=3, turns=vulnerable, callback=powers.VULNERABLE, AffectDescription=powers.DESCRIPTIONS.VULNERABLE)
 		targets = self.ApplyPowers(vulnerablePower, affectClass=self.Abilities[self.Callbacks.index(self.Scrape)].affectClass,
-						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
+						ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
@@ -426,7 +426,7 @@ class Cultist(monsters.Monster):
 			Ritual = 3
 		"""
 		self.ApplyPowers(ritualPower, affectClass=self.Abilities[self.Callbacks.index(self.Incantation)].affectClass,
-						ArenaTargets=1, ArenaSelf=True, ArenaAll=False,
+						ArenaTargets=1, ArenaOnlySelf=True, ArenaIncludeSelf=True, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=True, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
 						extras=[])
 		"""
@@ -515,7 +515,7 @@ class Louse(monsters.Monster):
 		# Apply strength to target
 		strengthPower = powers.Power(timings=powers.TRIGGER.OFFENSE, priority=1, turns=None, callback=powers.STRENGTH, AffectDescription=powers.DESCRIPTIONS.STRENGTH)
 		targets = self.ApplyPowers(strengthPower, affectClass=self.Abilities[self.Callbacks.index(self.Grow)].affectClass,
-						ArenaTargets=1, ArenaSelf=True, ArenaAll=False,
+						ArenaTargets=1, ArenaOnlySelf=True, ArenaIncludeSelf=True, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=True, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
 						extras=[])
 		'''
@@ -525,7 +525,7 @@ class Louse(monsters.Monster):
 	def Spit_Web(self):
 		weak = 2
 		targets = self.ApplyPowers(powers.makeWeak(weak), affectClass=self.Abilities[self.Callbacks.index(self.Spit_Web)].affectClass,
-						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
+						ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
