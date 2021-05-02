@@ -1,5 +1,6 @@
 #!/usr/env/python3
 import SpireArenaLib as SAL
+from time import perf_counter as clock
 
 """
 	Demonstrates usage patterns while also functioning
@@ -13,16 +14,18 @@ def build():
 	prs = AP()
 	testIDs = [0,1]
 	prs.add_argument("testID", type=int, choices=testIDs, help=f"Test to perform amongst {testIDs}")
-	prs.add_argument("-no-debug", action="store_true", help=f"See if you can rip off debug bandaid")
+	prs.add_argument('-debug', default=SAL.settings.ARENA_DEBUG, choices=list(SAL.settings.debug_names.keys()), help=f"Debug output level (default: {SAL.settings.reverse_debug_names[SAL.settings.ARENA_DEBUG]})")
+	prs.add_argument("-turns", "-max-turns", type=int, default=1, help="Turns to demonstrate (default 1)")
 	return prs
 def parse(prs, args=None):
 	args = prs.parse_args()
 	return args
 
 # Primary loop for all tests to execute
-def demo(battlefield):
-	for _ in range(1):
+def demo(battlefield, turns):
+	for _ in range(turns):
 		battlefield.Turn()
+	print("OUTPUT FROM demo.py::")
 	print(battlefield)
 	for group in battlefield.groups:
 		print(group)
@@ -30,8 +33,8 @@ def demo(battlefield):
 if __name__ == '__main__':
 	args = parse(build())
 	constructor_pattern = args.testID
-	if args.no_debug:
-		SAL.settings.ARENA_DEBUG = False
+	SAL.settings.ARENA_DEBUG = SAL.settings.debug_names[args.debug]
+	start = clock()
 	if constructor_pattern == 0:
 		"""
 			This pattern creates monsters first, then assigns them to groups
@@ -43,7 +46,6 @@ if __name__ == '__main__':
 		field = SAL.Arena(ID="SpireArena", groups=\
 								[SAL.MonsterGroup(ID="GroupA", monsters=monster_pool[:1]),
 						 		 SAL.MonsterGroup(ID="GroupB", monsters=monster_pool[1:])])
-		demo(field)
 	elif constructor_pattern == 1:
 		"""
 			This pattern creates the arena first, then groups to assign monsters
@@ -61,8 +63,9 @@ if __name__ == '__main__':
 												'ID': f"slime_{name}",\
 												'Arena':field,\
 												'Friendlies':group}))
-		demo(field)
 	else:
 		raise ValueError(f"constructor_pattern on line 5 has value {constructor_pattern}, valid values are {VALID_VALUES}")
-
+	demo(field, args.turns)
+	end = clock()
+	print(f"Elapsed time: {end-start}")
 

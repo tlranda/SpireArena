@@ -81,7 +81,7 @@ class Monster():
 		feel free to submit a pull request
 	"""
 	def ChangeEnvironment(self, **kwargs):
-		if settings.ARENA_DEBUG:
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{str(self)} edits environment to reflect new status given by {', '.join([str(k)+':'+str(v) for k,v in zip(kwargs.keys(), kwargs.values())])}")
 		if 'battlefield' in kwargs.keys():
 			self.Arena = kwargs['battlefield']
@@ -101,7 +101,8 @@ class Monster():
 		"""
 			No special intents by default
 		"""
-		print(f"{self.Name}'s move is not overridden by template class's SpecialIntent()")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{self.Name}'s move is not overridden by template class's SpecialIntent()")
 		return moveCall, moveAlternatives, moveChances
 
 	def MoveSelect(self, move=None):
@@ -136,12 +137,8 @@ class Monster():
 	def Turn(self, move=None):
 		if self.Alive:
 			move = self.MoveSelect(move)
-			"""
-			print(f"{str(self)} performs {str(move)}; history is "
-				  f"{[self.Callbacks[self.History[(self.HistoryIdx-_)%2]].__name__ for _ in range(len(self.History),0,-1)]}")
-			"""
 			move.callback()
-		elif settings.ARENA_DEBUG:
+		elif settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{str(self)} is dead. Skipping turn")
 
 	def Empower(self, value, source_class, *trigger_classes, source, target, extras=None):
@@ -160,10 +157,10 @@ class Monster():
 		powerQueue = sorted(powerQueue, key=lambda x: x.priority, reverse=True)
 		# Activate powers
 		for power in powerQueue:
-			if settings.ARENA_DEBUG:
+			if settings.DEBUG.full == settings.ARENA_DEBUG:
 				print("\t"+f"{str(self)} triggers power {power}")
 			new_value = power.Affect(value, source_class, source, target, extras)
-			if settings.ARENA_DEBUG:
+			if settings.DEBUG.full == settings.ARENA_DEBUG:
 				print("\t"+f"{str(self)}'s {power} updates value from {value} to {new_value}")
 			value = new_value
 		return value

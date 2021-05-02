@@ -1,4 +1,4 @@
-import powers, monsters
+import powers, monsters, settings
 
 def objects():
 	return {"AcidSlime": AcidSlime,
@@ -102,7 +102,8 @@ class AcidSlime(monsters.Monster):
 		# Deal damage
 		# Shuffle n_slimed slime statuses into target's discard pile (however that is implemented)
 		dealt, targets = self.Damage(damage)
-		print(f"{str(self)} uses CORROSIVE_SPIT to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you and shuffle {n_slimed} into {[str(monster) for monster in targets]}'s discard!!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses CORROSIVE_SPIT to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you and shuffle {n_slimed} into {[str(monster) for monster in targets]}'s discard!!")
 
 	def Lick(self):
 		if self.Size == 'L':
@@ -114,7 +115,8 @@ class AcidSlime(monsters.Monster):
 						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
-		print(f"{str(self)} uses LICK to apply {weak} weak to {[str(monster) for monster in targets]}!!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses LICK to apply {weak} weak to {[str(monster) for monster in targets]}!!")
 
 	def Tackle(self):
 		if self.Size == 'L':
@@ -137,7 +139,8 @@ class AcidSlime(monsters.Monster):
 		# How you would do a multihit:
 		#damages = [damage, damage]
 		#dealt, targets = self.Damage(*damages)
-		print(f"{str(self)} uses TACKLE to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to {[str(monster) for monster in targets]}!!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses TACKLE to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to {[str(monster) for monster in targets]}!!")
 
 
 # work in progress
@@ -212,7 +215,8 @@ class Slaver(monsters.Monster):
 				damage = 13
 		# Deal damage
 		dealt, targets = self.Damage(damage)
-		print(f"{str(self)} uses Stab to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to {[str(monster) for monster in targets]}!!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Stab to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to {[str(monster) for monster in targets]}!!")
 
 	def Rake(self):
 		#just for Blue Slaver applys weak and does damage to single target
@@ -233,7 +237,8 @@ class Slaver(monsters.Monster):
 						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
-		print(f"{str(self)} uses Rake to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage and apply {weak} weak to {[str(monster) for monster in targets]}!!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Rake to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage and apply {weak} weak to {[str(monster) for monster in targets]}!!")
 
 	def Scrape(self):
 		# ONLY RED SLAVER CAN USE Scrape
@@ -253,13 +258,15 @@ class Slaver(monsters.Monster):
 						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
-		print(f"{str(self)} uses Scrape to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage and apply {vulnerable} vulnerable to {[str(monster) for monster in targets]}!!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Scrape to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage and apply {vulnerable} vulnerable to {[str(monster) for monster in targets]}!!")
 
 	def Entangle(self):
 		# ONLY RED SLAVER CAN USE Entangle
 		# Entangle stops target from using attack next turn
 		entangle = 1
-		print(f"{str(self)} uses Entangle to apply 1 entangle!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Entangle to apply 1 entangle!")
 
 '''
 work in progress
@@ -325,7 +332,8 @@ class JawWorm(monsters.Monster):
 			damage = 11
 		# Deal damage
 		dealt, targets = self.Damage(damage)
-		print(f"{str(self)} uses Chomp to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Chomp to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you!")
 
 	def Thrash(self):
 		damage = 7
@@ -333,7 +341,8 @@ class JawWorm(monsters.Monster):
 		# Deal damage and gains block
 		#block = self.GainBlock(block)
 		dealt, targets = self.Damage(damage)
-		print(f"{str(self)} uses Thrash to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you and gains {block} block!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Thrash to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you and gains {block} block!")
 
 	def Bellow(self):
 		block = 6
@@ -345,7 +354,8 @@ class JawWorm(monsters.Monster):
 		else:
 			strength = 3
 		# Gains strength and block
-		print(f"{str(self)} uses Bellow to gain {strength} and {block} block!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Bellow to gain {strength} and {block} block!")
 
 
 '''
@@ -403,7 +413,8 @@ class Cultist(monsters.Monster):
 		damage = 6
 		# Deal damage
 		dealt, targets = self.Damage(damage)
-		print(f"{str(self)} uses Stab to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you!!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Stab to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you!!")
 
 	def Incantation(self):
 		#gains strength per tern
@@ -419,7 +430,8 @@ class Cultist(monsters.Monster):
 						GroupTargets=1, GroupOnlySelf=True, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
 						extras=[])
 		"""
-		print(f"{str(self)} uses Incantation to gain Ritual {Ritual}!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Incantation to gain Ritual {Ritual}!")
 
 '''
 work in progress
@@ -490,7 +502,8 @@ class Louse(monsters.Monster):
 			damage += 1
 		# Deal damage
 		dealt, targets = self.Damage(damage)
-		print(f"{str(self)} uses Bite to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you!!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Bite to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you!!")
 
 	def Grow(self):
 		# Just for Red Louse
@@ -506,7 +519,8 @@ class Louse(monsters.Monster):
 						GroupTargets=1, GroupOnlySelf=True, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
 						extras=[])
 		'''
-		print(f"{str(self)} uses Grow to apply {strength} strength to {[str(monster) for monster in targets]}!!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Grow to apply {strength} strength to {[str(monster) for monster in targets]}!!")
 
 	def Spit_Web(self):
 		weak = 2
@@ -514,5 +528,6 @@ class Louse(monsters.Monster):
 						ArenaTargets=1, ArenaSelf=False, ArenaAll=False,
 						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
-		print(f"{str(self)} uses Spit Web apply {weak} weak to {[str(monster) for monster in targets]}!!")
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{str(self)} uses Spit Web apply {weak} weak to {[str(monster) for monster in targets]}!!")
 

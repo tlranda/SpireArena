@@ -32,7 +32,7 @@ class MonsterGroup():
 	def __init__(self, monsters=None, setting=None, ID="<TemplateGroup>"):
 		if monsters is None:
 			monsters = list()
-		if settings.ARENA_DEBUG:
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"Making{' empty' if monsters == [] else ''} monster group {ID}{' out of '+','.join([str(m) for m in monsters]) if monsters != [] else ''}")
 		self.ID = ID
 		self.setting = setting
@@ -66,7 +66,7 @@ class MonsterGroup():
 	# Add monsters to the group, assumed to be ephemeral (not resurrected when group is reset) unless otherwise specified
 	def AddMonsters(self, ephemeral=True, *monsters):
 		for monster in monsters:
-			if settings.ARENA_DEBUG:
+			if settings.DEBUG.full == settings.ARENA_DEBUG:
 				print(f"{str(self)} adds monster {monster}")
 			# Ensure monster is aware of its surroundings, which includes this friendly group and this arena
 			monster.ChangeEnvironment(battlefield=self.setting, friendly=self)
@@ -84,7 +84,7 @@ class MonsterGroup():
 				# Cannot remove a monster that is not in this group
 				pass
 			else:
-				if settings.ARENA_DEBUG:
+				if settings.DEBUG.full == settings.ARENA_DEBUG:
 					print(f"{str(self)} removes monster {monster}")
 				self.monsters.remove(monster)
 				# Delink monster affiliation with THIS GROUP, but it may remain in the arena until otherwise specified
@@ -95,17 +95,17 @@ class MonsterGroup():
 
 	# Bring back non-ephemeral monsters
 	def Reset(self):
-		if settings.ARENA_DEBUG:
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{str(self)} is resetting.")
 		new_monsters, new_ephemeral = [], []
 		for idx, truth in enumerate(self.ephemeral):
 			if not truth:
 				new_monsters.append(self.monsters[idx])
 				new_ephemeral.append(False)
-				if settings.ARENA_DEBUG:
+				if settings.DEBUG.full == settings.ARENA_DEBUG:
 					print("\t"+f"Non-ephemeral monster {new_monsters[-1]} is reset")
 				new_monsters[-1].Reset()
-			elif settings.ARENA_DEBUG:
+			elif settings.DEBUG.full == settings.ARENA_DEBUG:
 				print("\t"+f"Ephemeral monster {self.monsters[idx]} will not be reset and exits the group")
 		self.monsters = new_monsters
 		self.ephemeral = new_ephemeral
@@ -113,11 +113,11 @@ class MonsterGroup():
 
 	# All monsters in the group are given a turn
 	def Turn(self):
-		if settings.ARENA_DEBUG:
+		if settings.ARENA_DEBUG == settings.DEBUG.full:
 			print(f"{self.ID} takes turns for all monsters in its group")
 		for monster in self.monsters:
 			monster.Turn()
-		if settings.ARENA_DEBUG:
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{self.ID} ticks all powers in its group")
 		# Tick all powers for all monsters after the group's turn
 		for monster in self.monsters:
@@ -146,7 +146,7 @@ class MonsterGroup():
 
 	# Call to move group and all of its monsters to a new arena
 	def MoveGroup(self, newSetting):
-		if settings.ARENA_DEBUG:
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{self.ID} moves from "+\
 				f"{self.setting.ID if self.setting is not None else 'None'} to "+\
 				f"{newSetting.ID if newSetting is not None else 'None'}")
@@ -180,7 +180,7 @@ class Arena():
 		global global_rng
 		self.rng = global_rng
 		self.groups = []
-		if settings.ARENA_DEBUG:
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"Creating{' empty' if groups == [] else ''} arena {ID}{' with Groups '+', '.join([str(g) for g in groups]) if groups != [] else ''}")
 		for group in groups:
 			group.MoveGroup(self)
@@ -197,14 +197,14 @@ class Arena():
 			yield group
 
 	def AddGroups(self, *groups):
-		if settings.ARENA_DEBUG:
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{self.ID} adds Groups: {', '.join([g.ID for g in groups])}")
 		for group in groups:
 			group.MoveGroup(self)
 			self.groups.append(group)
 
 	def RemoveGroups(self, *groups):
-		if settings.ARENA_DEBUG:
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{self.ID} adds Groups: {', '.join([g.ID for g in groups])}")
 		for group in groups:
 			try:
@@ -216,14 +216,14 @@ class Arena():
 				group.MoveGroup(None)
 
 	def Reset(self):
-		if settings.ARENA_DEBUG:
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{self.ID} resets")
 		self.turn = 0
 		for group in self.groups:
 			group.Reset()
 
 	def Turn(self):
-		if settings.ARENA_DEBUG:
+		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{self.ID} BEGINS TURN {self.turn}")
 		for group in self.groups:
 			group.Turn()
@@ -247,7 +247,7 @@ class Arena():
 		fight_on = sum([int(group.GroupStatus) for group in self.groups])
 		while fight_on >= 2:
 			if max_turns is not None and self.turn >= max_turns:
-				if settings.ARENA_DEBUG:
+				if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 					print(f"{self.ID} TURN LIMIT REACHED")
 				break
 			self.Turn()

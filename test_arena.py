@@ -9,8 +9,8 @@ def build():
 	prs = AP()
 	prs.add_argument('-group', type=str, default=[], nargs="+", action="append", required=True, help="Filenames defining monster groups to fight")
 	prs.add_argument('-seed', type=int, default=None, help="Set global RNG seed (default not set--psuedorandom)")
-	prs.add_argument('-max-turns', type=int, default=None, help="Limit turns in each brawl (default None)")
-	prs.add_argument('-no-debug', action='store_true', help="Reduce SpireArenaLib debug output")
+	prs.add_argument('-max-turns', '-turns', type=int, default=None, help="Limit turns in each brawl (default None)")
+	prs.add_argument('-debug', default=settings.ARENA_DEBUG, choices=list(settings.debug_names.keys()), help=f"Debug output level (default: {settings.reverse_debug_names[settings.ARENA_DEBUG]})")
 	return prs
 
 def parse(prs, args=None):
@@ -29,8 +29,7 @@ def parse(prs, args=None):
 
 if __name__ == '__main__':
 	args = parse(build())
-	if args.no_debug:
-		settings.ARENA_DEBUG = False
+	settings.ARENA_DEBUG = settings.debug_names[args.debug]
 	# Set seed as necssary
 	if args.seed is not None:
 		arena.global_rng.seed(args.seed)
