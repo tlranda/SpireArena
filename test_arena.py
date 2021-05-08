@@ -10,7 +10,7 @@ def build():
 	prs.add_argument('-group', type=str, default=[], nargs="+", action="append", required=True, help="Filenames defining monster groups to fight")
 	prs.add_argument('-seed', type=int, default=None, help="Set global RNG seed (default not set--psuedorandom)")
 	prs.add_argument('-max-turns', '-turns', type=int, default=None, help="Limit turns in each brawl (default None)")
-	prs.add_argument('-debug', default=settings.ARENA_DEBUG, choices=list(settings.debug_names.keys()), help=f"Debug output level (default: {settings.reverse_debug_names[settings.ARENA_DEBUG]})")
+	prs.add_argument('-debug', default=settings.reverse_debug_names[settings.ARENA_DEBUG], choices=list(settings.debug_names.keys()), help=f"Debug output level (default: {settings.reverse_debug_names[settings.ARENA_DEBUG]})")
 	return prs
 
 def parse(prs, args=None):
@@ -39,4 +39,6 @@ if __name__ == '__main__':
 		with open(combat_group, 'r') as f:
 			monsters.makeMonsterGroupFromFile(f, colliseum)
 	winner = colliseum.Brawl(args.max_turns)
+	print(f"A winner has been determined in {colliseum.turn} turns")
+	print(f"Winners are: {[str(monster) for monster in winner]}")
 

@@ -16,7 +16,7 @@ def build():
 	prs = AP()
 	testIDs = [0,1,2,3]
 	prs.add_argument("testID", type=int, choices=testIDs, help=f"Test to perform amongst {testIDs}")
-	prs.add_argument('-debug', default=SAL.settings.ARENA_DEBUG, choices=list(SAL.settings.debug_names.keys()), help=f"Debug output level (default: {SAL.settings.reverse_debug_names[SAL.settings.ARENA_DEBUG]})")
+	prs.add_argument('-debug', default=SAL.settings.reverse_debug_names[SAL.settings.ARENA_DEBUG], choices=list(SAL.settings.debug_names.keys()), help=f"Debug output level (default: {SAL.settings.reverse_debug_names[SAL.settings.ARENA_DEBUG]})")
 	prs.add_argument("-turns", "-max-turns", type=int, default=1, help="Turns to demonstrate (default 1)")
 	return prs
 def parse(prs, args=None):
@@ -78,6 +78,9 @@ if __name__ == '__main__':
 		jawWorm.Turn(move)
 		# Manually invoke a damaging attack to test block:
 		move = acidSlime.Abilities[acidSlime.Callbacks.index(acidSlime.Tackle)]
+		acidSlime.Turn(move)
+		acidSlime.Turn(move)
+		acidSlime.Turn(move)
 		acidSlime.Turn(move)
 		acidSlime.Turn(move)
 		acidSlime.Turn(move)
