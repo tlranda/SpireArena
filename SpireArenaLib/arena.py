@@ -2,6 +2,7 @@
 from copy import deepcopy as dcpy
 # Globally controls RNG, debug output and perhaps other things in the future
 import settings
+from powers import SOURCE, TRIGGER
 
 """
 #2 MonsterGroup (Instanceable)
@@ -112,8 +113,15 @@ class MonsterGroup():
 	def Turn(self):
 		if settings.ARENA_DEBUG == settings.DEBUG.full:
 			print(f"{self.ID} takes turns for all monsters in its group")
+		# Trigger turn start effects
+		for monster in self.monsters:
+			monster.Empower(None, SOURCE.FX, TRIGGER.TURN_START, source=monster, target=None, extras=None)
+		# Monsters take their turns
 		for monster in self.monsters:
 			monster.Turn()
+		# Trigger turn end effects
+		for monster in self.monsters:
+			monster.Empower(None, SOURCE.FX, TRIGGER.TURN_END, source=monster, target=None, extras=None)
 		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{self.ID} ticks all powers in its group")
 		# Tick all powers for all monsters after the group's turn

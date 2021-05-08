@@ -143,15 +143,11 @@ class Monster():
 		return move
 
 	def Turn(self, move=None):
-		# Trigger turn start effects
-		self.Empower(None, SOURCE.FX, TRIGGER.TURN_START, source=self, target=None, extras=None)
 		if self.Alive:
 			move = self.MoveSelect(move)
 			move.callback()
 		elif settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{str(self)} is dead. Skipping move portion of turn")
-		# Trigger turn end effects
-		self.Empower(None, SOURCE.FX, TRIGGER.TURN_END, source=self, target=None, extras=None)
 
 	def Empower(self, value, source_class, *trigger_classes, source, target, extras=None):
 		"""
