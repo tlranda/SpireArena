@@ -19,6 +19,9 @@ STRUCTURE:
 Design TODO:
 * More basic StS power implementations: Vulnerable, Frail, Thorns, Strength/Shackles
 * Entanglement requires other means to cancel moves, may play into how statuses operate (chance to apply status to move portion targeting creature?)
+    * Monsters '''draw''' 5 cards a turn, with 2+Act energy to play them (default 1 cost per card). During a turn, monsters can spend these resources.
+	* By default, monsters ONLY PLAY 1 card, but it costs +1 energy to target more enemies.
+	* When a monster draws a status, it triggers a % chance that a potentially targetable enemy ends up being untargetable
 * Implementing statuses and how they interact with monster intents
 * For artifact tags to work, one of two things:
 	* Assume that enemies do not buff one another and artifact prevents incoming power, but friendlies buff so allow incoming power
