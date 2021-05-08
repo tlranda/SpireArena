@@ -17,14 +17,28 @@ STRUCTURE:
 	+ single\_slime\_2.txt: One Medium AcidSlime at ascension 2
 
 Design TODO:
+* More basic StS power implementations: Vulnerable, Frail, Thorns, Strength/Shackles
+* Entanglement requires other means to cancel moves, may play into how statuses operate (chance to apply status to move portion targeting creature?)
 * Implementing statuses and how they interact with monster intents
-* Default monster powers:
-	* On death: Announce death, mark dead in group
-* Frail, Thorns, Strength/Shackles
 * For artifact tags to work, one of two things:
 	* Assume that enemies do not buff one another and artifact prevents incoming power, but friendlies buff so allow incoming power
 	* Rework power class to have buff/debuff tags to guarantee the artifact charges work as intended
+* Moveset swapping, moveset disabling
+* Darkling madness
+* Reacting to plays of any/all types
+* Group total ordering for surrounding and back attacks
 
 Labor TODO:
 * Implementing powers/monsters from the game
-
+* Act 1 monsters: Adding Slime Splits, Thief Escapes, Entanglement, Enrage
+  + Act 1 elites: Also enrage, asleep, metallicize, strength down, dexterity down, Artifact
+  + Act 1 bosses: Also defensive/offensive modes
+* Act 2 monsters: Adding Flying, Hexing, Plated Armor, Healing, Malleable, Confusion
+  + Act 2 elites: Also summon monsters, painful stabs
+  + Act 2 bosses: Also stasis
+* Act 3 monsters: Adding Lifelink/Regrow/Revive, Thorns, Explode, Constricted, Fading, Shifting, ?Reactive?
+  + Act 3 elites: Also slow, intangible
+  + Act 3 bosses: Also curiosity, time warp, draw reduction
+* Act 4 monsters: Adding surrounded, back attack
+  + Act 4 bosses: Also beat of death, invincible
+  + Act 4 empowered elites: Also regeneration
