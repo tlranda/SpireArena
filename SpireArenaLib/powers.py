@@ -47,6 +47,7 @@ class TRIGGER(enum.Enum):
 	AFTER_ATTACK = enum.auto()
 	AFTER_ATTACK_ED = enum.auto()
 	TURN_START = enum.auto()
+	TURN_END = enum.auto()
 
 """
 	FOR INTERNAL USE (THIS FILE) ONLY
@@ -66,6 +67,7 @@ class DESCRIPTIONS():
 	BLOCK = "Reduce attack damage by 1 per stack, then remove that many stacks"
 	BARRICADE = "Block is not removed at the start of turns"
 	BLOCK_LOSS_TURN_START = "Block is removed at the start of turns"
+	DEAD = "Non-combat state"
 
 """
 Revision note for powers:
@@ -288,6 +290,24 @@ def BLOCK_LOSS_TURN_START(value, affectClass, source, target, *extra):
 def makeBlockLossEachTurn():
 	return Power(timings=TRIGGER.TURN_START, priority=0, turns=None, callback=BLOCK_LOSS_TURN_START, AffectDescription=DESCRIPTIONS.BLOCK_LOSS_TURN_START)
 
+def die(value, affectClass, source, target, *extra):
+	"""
+		TRIGGER should be TRIGGER.ON_HP_REDUCE
+		Priority should be 0
+		Turns should be None (always on, checks for death)
+		Side Effects: Marks as dead when HP reduced to/below 0
+	"""
+	if target.Health <= 0 and target.Alive:
+		target.Alive = False
+		# Mark dead in group, handle group death
+		if target.Friendlies is not None:
+			target.Friendlies.fight_on -= 1
+		# Trigger any on-death effects
+		triggers = [TRIGGER.ON_DEATH]
+		target.Empower(None, SOURCE.FX, *triggers, source=source, target=target, extras=None)
+def makeDie():
+	return Power(timings=TRIGGER.ON_HP_REDUCE, priority=0, turns=None, callback=die, AffectDescription=DESCRIPTIONS.DEAD)
+
 powerDict = {	'weak': makeWeak,
 				'shackles': makeShackles,
 				'strength': makeStrength,
@@ -296,6 +316,7 @@ powerDict = {	'weak': makeWeak,
 				'block': makeBlock,
 				'barricade': makeBarricade,
 				'blockLossEachTurn': makeBlockLossEachTurn,
+				'die': makeDie,
 			}
 def makePower(powerName, *powerValues):
 	return powerDict[powerName](*powerValues)

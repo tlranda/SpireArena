@@ -59,12 +59,12 @@ class Monster():
 		self.Name, self.Act, self.ascension = "<GenericMonster>", 0, 0
 		self.MaxHealth, self.Health, self.Block = 0, 0, 0
 		self.Pattern, self.Abilities, self.Callbacks = [], [], []
-		self.PowerPool = [makePower('block'), makePower('blockLossEachTurn')]
+		self.PowerPool = [makePower('block'), makePower('blockLossEachTurn'), makePower('die')]
 		self.History, self.HistoryIdx = [], 0
 		self.Alive = True # Should become a property
 
 	def __str__(self):
-		string = f"{self.Name} {self.ID}"
+		string = f"{self.Name} {self.ID} [{self.Health}/{self.MaxHealth} HP]"
 		if self.Friendlies is not None:
 			string = f"{self.Friendlies.ID}::{string}"
 		if self.Arena is not None:
@@ -91,12 +91,12 @@ class Monster():
 
 	def Reset(self):
 		self.Health = self.MaxHealth
-		self.Alive = True
-		self.PowerPool = [makePower('block'), makePower('blockLossEachTurn')]
-		self.History = []
-		self.HistoryIdx = 0
 		if not self.Alive and self.Friendlies is not None:
 			self.Friendlies.fight_on += 1
+		self.Alive = True
+		self.PowerPool = [makePower('block'), makePower('blockLossEachTurn'), makePower('die')]
+		self.History = []
+		self.HistoryIdx = 0
 
 	def SpecialIntent(self, moveCall, moveAlternatives, moveChances):
 		"""
@@ -143,13 +143,15 @@ class Monster():
 		return move
 
 	def Turn(self, move=None):
+		# Trigger turn start effects
+		self.Empower(None, SOURCE.FX, TRIGGER.TURN_START, source=self, target=None, extras=None)
 		if self.Alive:
-			# Trigger turn start effects
-			self.Empower(None, SOURCE.FX, TRIGGER.TURN_START, source=self, target=None, extras=None)
 			move = self.MoveSelect(move)
 			move.callback()
 		elif settings.DEBUG.full == settings.ARENA_DEBUG:
-			print(f"{str(self)} is dead. Skipping turn")
+			print(f"{str(self)} is dead. Skipping move portion of turn")
+		# Trigger turn end effects
+		self.Empower(None, SOURCE.FX, TRIGGER.TURN_END, source=self, target=None, extras=None)
 
 	def Empower(self, value, source_class, *trigger_classes, source, target, extras=None):
 		"""
@@ -188,6 +190,9 @@ class Monster():
 		arenaGroups = [[val for val in self.Arena.Affect(self.Friendlies, OnlySelf=ArenaOnlySelf, IncludeSelf=ArenaIncludeSelf, All=ArenaAll)] for _ in range(ArenaTargets)]
 		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"Select Candidate Groups = {','.join([', '.join([str(g) for g in ag[1:]]) for ag in arenaGroups])}")
+		if arenaGroups[0][0] == 0:
+			# There are no valid targets, return None
+			return None
 		# Determine number of targets to pick
 		maxTargeted = sum([_[0] for _ in arenaGroups])
 		if ArenaTargets is not None:
@@ -206,6 +211,9 @@ class Monster():
 		monsterGroups = [[val for val in group.Affect(self, GroupOnlySelf, GroupIncludeSelf, GroupAll, GroupCheckAlive)] for group in targetedGroups]
 		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"Select Candidate Monsters = {','.join([','.join([str(g) for g in mg[1:]]) for mg in monsterGroups])}")
+		if monsterGroups[0][0] == 0:
+			# There are no valid targets, return None
+			return None
 		# Refine number of targets to pick
 		maxTargeted = sum([_[0] for _ in monsterGroups])
 		if GroupTargets is not None:
@@ -234,6 +242,11 @@ class Monster():
 			extras = list()
 		targets = self.Select(ArenaTargets=ArenaTargets, ArenaOnlySelf=ArenaOnlySelf, ArenaIncludeSelf=ArenaIncludeSelf, ArenaAll=ArenaAll,
 				GroupTargets=GroupTargets, GroupOnlySelf=GroupOnlySelf, GroupIncludeSelf=GroupIncludeSelf, GroupAll=GroupAll, GroupCheckAlive=GroupCheckAlive)
+		if targets is None:
+			# The move fails due to no targets
+			if settings.DEBUG.full == settings.ARENA_DEBUG:
+				print(f"Power instance {powers} fails to apply -- NO VALID TARGETS")
+			return [None]
 		enemies = self.Select(ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=True,
 				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=GroupCheckAlive)
 		Powers = [[TRIGGER.ON_POWER_GAIN], [TRIGGER.VS_POWER_GAIN]]
@@ -271,6 +284,11 @@ class Monster():
 			extras = list()
 		targets = self.Select(ArenaTargets=ArenaTargets, ArenaOnlySelf=ArenaOnlySelf, ArenaIncludeSelf=ArenaIncludeSelf, ArenaAll=ArenaAll,
 				GroupTargets=GroupTargets, GroupOnlySelf=GroupOnlySelf, GroupIncludeSelf=GroupIncludeSelf, GroupAll=GroupAll, GroupCheckAlive=GroupCheckAlive)
+		if targets is None:
+			# The move fails due to no targets
+			if settings.DEBUG.full == settings.ARENA_DEBUG:
+				print(f"Block instance {amounts} fails to trigger -- NO VALID TARGETS")
+			return [0], [None]
 		applied = []
 		# Iteratively gain block
 		for block in amounts:
@@ -316,6 +334,11 @@ class Monster():
 			extras = list()
 		targets = self.Select(ArenaTargets=ArenaTargets, ArenaOnlySelf=ArenaOnlySelf, ArenaIncludeSelf=ArenaIncludeSelf, ArenaAll=ArenaAll,
 				GroupTargets=GroupTargets, GroupOnlySelf=GroupOnlySelf, GroupIncludeSelf=GroupIncludeSelf, GroupAll=GroupAll, GroupCheckAlive=GroupCheckAlive)
+		if targets is None:
+			# The move fails due to no targets
+			if settings.DEBUG.full == settings.ARENA_DEBUG:
+				print(f"Damage instance {amounts} fails to trigger -- NO VALID TARGETS")
+			return [0], [None]
 		# Iteratively perform damage
 		dealt = []
 		for damage in amounts:
