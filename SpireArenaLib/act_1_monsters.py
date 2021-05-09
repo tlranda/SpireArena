@@ -39,9 +39,9 @@ class AcidSlime(monsters.Monster):
 			self.MaxHealth = self.rng.randint(8,12)
 			self.AscendMaxHealth = 1
 		# Moves
-		self.makeMoves((powers.SOURCE.ATTACK, self.Corrosive_Spit, f"{str(self)} spits"),
-						(powers.SOURCE.ATTACK, self.Tackle, f"{str(self)} tackles"),
-						(powers.SOURCE.SKILL, self.Lick, f"{str(self)} licks"))
+		self.makeMoves((powers.SOURCE.ATTACK, self.Corrosive_Spit, False, f"{str(self)} spits"),
+						(powers.SOURCE.ATTACK, self.Tackle, False, f"{str(self)} tackles"),
+						(powers.SOURCE.SKILL, self.Lick, False, f"{str(self)} licks"))
 		if self.Size == 'S':
 			self.Pattern = [0, 0.5, 0.5]
 		else:
@@ -172,10 +172,10 @@ class Slaver(monsters.Monster):
 		self.MaxHealth = self.rng.randint(46,50)
 		self.AscendMaxHealth = 2
 		# Moves
-		self.makeMoves((powers.SOURCE.ATTACK, self.Stab, f"{str(self)} stabs"),
-						(powers.SOURCE.ATTACK, self.Rake, f"{str(self)} rakes"),
-						(powers.SOURCE.ATTACK, self.Scrape, f"{str(self)} scrapes"),
-						(powers.SOURCE.SKILL, self.Entangle, f"{str(self)} throws net"))
+		self.makeMoves((powers.SOURCE.ATTACK, self.Stab, False, f"{str(self)} stabs"),
+						(powers.SOURCE.ATTACK, self.Rake, False, f"{str(self)} rakes"),
+						(powers.SOURCE.ATTACK, self.Scrape, False, f"{str(self)} scrapes"),
+						(powers.SOURCE.SKILL, self.Entangle, False, f"{str(self)} throws net"))
 		if self.Color == 'Blue':
 			self.Pattern = [0.4, 0.6, 0, 0]
 		else:
@@ -296,9 +296,9 @@ class JawWorm(monsters.Monster):
 		self.AscendMaxHealth = 2
 
 		# Moves
-		self.makeMoves((powers.SOURCE.ATTACK, self.Chomp, f"{str(self)} chomps"),
-						(powers.SOURCE.ATTACK, self.Thrash, f"{str(self)} thrashs"),
-						(powers.SOURCE.POWER, self.Bellow, f"{str(self)} bellows"))
+		self.makeMoves((powers.SOURCE.ATTACK, self.Chomp, False, f"{str(self)} chomps"),
+						(powers.SOURCE.ATTACK, self.Thrash, False, f"{str(self)} thrashs"),
+						(powers.SOURCE.POWER, self.Bellow, False, f"{str(self)} bellows"))
 		self.Pattern = [0.25, 0.30, 0.45]
 
 		# Ascend the mortal form
@@ -390,8 +390,8 @@ class Cultist(monsters.Monster):
 		self.MaxHealth = self.rng.randint(48, 54)
 		self.AscendMaxHealth = 2
 		# Moves
-		self.makeMoves((powers.SOURCE.ATTACK, self.Dark_Strike, f"{str(self)} stabs"),
-						(powers.SOURCE.POWER, self.Incantation, f"{str(self)} performs a ritual"))
+		self.makeMoves((powers.SOURCE.ATTACK, self.Dark_Strike, False, f"{str(self)} stabs"),
+						(powers.SOURCE.POWER, self.Incantation, False, f"{str(self)} performs a ritual"))
 		self.Pattern = [1, 0]
 
 		# Ascend the mortal form
@@ -469,9 +469,9 @@ class Louse(monsters.Monster):
 			self.MaxHealth = self.rng.randint(11, 17)
 			self.AscendMaxHealth = 1
 		# Moves
-		self.makeMoves((powers.SOURCE.ATTACK, self.Bite, f"{str(self)} bites"),
-						(powers.SOURCE.SKILL, self.Grow, f"{str(self)} gets larger"),
-						(powers.SOURCE.SKILL, self.Spit_Web, f"{str(self)} spits web"))
+		self.makeMoves((powers.SOURCE.ATTACK, self.Bite, False, f"{str(self)} bites"),
+						(powers.SOURCE.SKILL, self.Grow, False, f"{str(self)} gets larger"),
+						(powers.SOURCE.SKILL, self.Spit_Web, False, f"{str(self)} spits web"))
 		if self.Color == 'Red':
 			self.Pattern = [0.75, 0.25, 0]
 		else:

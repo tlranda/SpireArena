@@ -1,5 +1,5 @@
 # Should not need more than these enums and the makePower call
-from powers import SOURCE, TRIGGER, makePower
+from powers import SOURCE, TRIGGER, makePower, affectLookup
 from arena import MonsterGroup
 import settings
 
@@ -13,17 +13,31 @@ import settings
 """
 #0 MonsterMove (Abstract)
 	Defines a particular monster move
-	Given a class, callback, and string-able attributes
+	Given a class, energy cost, callback, and string-able attributes
 """
 class MonsterMove():
-	def __init__(self, affectClass, callback, description="<No move description provided>"):
+	def __init__(self, affectClass, callback, isStatus=False, description="<No move description provided>", energyCost=1):
 		self.affectClass = affectClass
 		self.callback = callback
+		self.cost = energyCost
+		self.isStatus = isStatus
 		self.ID = callback.__name__
 		self.description = description
 
 	def __str__(self):
 		return f"{self.ID} defined as {self.description}"
+
+	def call(self, monster):
+		"""
+			Spend the required energy if available, then make the callback
+		"""
+		if monster.Energy >= self.cost:
+			monster.Energy -= self.cost
+			self.callback()
+			# Play and class triggers occur
+			monster.Empower(None, SOURCE.FX, *affectLookup[self.affectClass], monster, None, extras=None)
+		elif settings.DEBUG.full == settings.ARENA_DEBUG:
+			print(f"{str(monster)} has insufficient energy {monster.Energy} to cast {self.ID} (costs {self.cost})")
 
 """
 #1 Monster (Abstract)
@@ -40,7 +54,9 @@ class Monster():
 				* Friendlies (arena.MonsterGroup reference for allied block)
 				* rng (random.RandomState for RNG)
 				* Name (str, flavor)
-				* Act (int, flavor)
+				* Act (int)
+				* BaseDraw (int)
+				* BaseEnergy, Energy (int, int)
 				* Abilities (list of callable functions to perform attacks)
 				* Pattern (list of weights to probabilistically sample an action from)
 				* Ascension (int: this monster is at ascension X)
@@ -57,11 +73,22 @@ class Monster():
 		self.Friendlies = Friendlies
 		self.rng = settings.global_rng
 		self.Name, self.Act, self.ascension = "<GenericMonster>", 0, 0
-		self.MaxHealth, self.Health, self.Block = 0, 0, 0
-		self.Pattern, self.Abilities, self.Callbacks = [], [], []
+		self.MaxHealth, self.Health, self.Block, self.BaseDraw, self.BaseEnergy, self.Energy = 0, 0, 0, 5, 2, 0
+		self.HistoryLimit, self.Pattern, self.Abilities, self.Callbacks = 0, [], [], []
 		self.PowerPool = [makePower('block'), makePower('blockLossEachTurn'), makePower('die')]
 		self.History, self.HistoryIdx = [], 0
 		self.Alive = True # Should become a property
+
+	def Reset(self):
+		self.Health = self.MaxHealth
+		if not self.Alive and self.Friendlies is not None:
+			self.Friendlies.fight_on += 1
+		self.BaseDraw = self.BaseDraw
+		self.BaseEnergy = 2+self.Act
+		self.Alive = True
+		self.PowerPool = [makePower('block'), makePower('blockLossEachTurn'), makePower('die')]
+		self.History = []
+		self.HistoryIdx = 0
 
 	def __str__(self):
 		string = f"{self.Name} {self.ID} [{self.Health}/{self.MaxHealth} HP]"
@@ -89,15 +116,6 @@ class Monster():
 		if 'friendly' in kwargs.keys():
 			self.Friendlies = kwargs['friendly']
 
-	def Reset(self):
-		self.Health = self.MaxHealth
-		if not self.Alive and self.Friendlies is not None:
-			self.Friendlies.fight_on += 1
-		self.Alive = True
-		self.PowerPool = [makePower('block'), makePower('blockLossEachTurn'), makePower('die')]
-		self.History = []
-		self.HistoryIdx = 0
-
 	def SpecialIntent(self, moveCall, moveAlternatives, moveChances):
 		"""
 			No special intents by default
@@ -107,9 +125,13 @@ class Monster():
 		return moveCall
 
 	def makeMoves(self, *move_tuples):
+		n_moves = len(move_tuples)
 		self.Callbacks = []
 		self.Abilities = []
+		self.Pattern = [1/n_moves for _ in range(n_moves)]
+		self.HistoryLimit = n_moves
 		for move in move_tuples:
+			# Source, [Callback], isStatus, Description
 			self.Callbacks.append(move[1])
 			self.Abilities.append(MonsterMove(*move))
 
@@ -135,17 +157,31 @@ class Monster():
 			move = self.rng.choices(remainingMoves, weights=remainingChances, k=1)[0]
 			move_idx = self.Callbacks.index(move.callback)
 		# Record history
-		if len(self.History) < 2:
+		if len(self.History) < 2 and move_idx < self.HistoryLimit:
 			self.History.append(move_idx)
-		else:
+		elif move_idx < self.HistoryLimit:
 			self.History[self.HistoryIdx] = move_idx
 		self.HistoryIdx = (self.HistoryIdx + 1) % 2
 		return move
 
-	def Turn(self, move=None):
+	def Turn(self, move=None, solo_action=False):
+		"""
+			Monster takes its turn
+			NOTE: TURN_START and TURN_END triggers are AUTOMATICALLY called by MonsterGroup for collective triggering semantics
+			ONLY set solo_action=True if you know what you are doing
+		"""
 		if self.Alive:
-			move = self.MoveSelect(move)
-			move.callback()
+			if solo_action:
+				self.Empower(None, SOURCE.FX, TRIGGER.TURN_START, source=self, target=None, extras=None)
+			self.Energy = self.BaseEnergy
+			# Card draw implementation
+			isStatus = True
+			while isStatus and self.Energy > 0: # Add hand played term when playing cards is added, as you could have 1 energy and all 2-costs or something
+				# Move through statuses then select a move
+				move = self.MoveSelect(move)
+				move.call(self)
+			if solo_action:
+				self.Empower(None, SOURCE.FX, TRIGGER.TURN_END, source=self, target=None, extras=None)
 		elif settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{str(self)} is dead. Skipping move portion of turn")
 

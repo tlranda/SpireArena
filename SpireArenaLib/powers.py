@@ -14,14 +14,10 @@ class SOURCE(enum.Enum):
 	It's a poor man's listener API because event-driven is hard and I'm dumb
 """
 class TRIGGER(enum.Enum):
-	OFFENSE = enum.auto()
-	DEFENSE = enum.auto()
-	ON_DEATH = enum.auto()
-		# Should have default that logs death and decrements friendly group's fight_on
-		# Because darkling slimes exist, on death should also kill MOST other powers
-		# but powers should have a (default on) field indicating that they get removed
-		# with the on-death call. any power turning that off should be VERY intentional
-		# about it
+	OFFENSE = enum.auto()         # interact with DAMAGE OUTPUT from SOURCE (weak, strength, shackles)
+	DEFENSE = enum.auto()         # interact with DAMAGE MITIGATION at TARGET (vulnerable, block, intangible, frail)
+	REGEN = enum.auto()           # involve LIFE GAIN at EITHER endpoint (regen, heals, resurrection)
+	ON_DEATH = enum.auto()        # occur when the TARGET creature is killed
 	"""
 	Solution to Darkling Nonsense:
 		Unlimited turn power with ON_DEATH trigger that CREATES and ASSIGNS a new
@@ -31,23 +27,26 @@ class TRIGGER(enum.Enum):
 		The TRIGGER power is an ON_POWER_LOSE looking for that timer expiring, and calls
 		the darkling slime's half-rez ability
 	"""
-	ON_KILL = enum.auto()
-	ON_ATTACK = enum.auto()
-	VS_ATTACK = enum.auto()
-	ON_SKILL = enum.auto()
-	VS_SKILL = enum.auto()
-	ON_POWER_GAIN = enum.auto()
-	VS_POWER_GAIN = enum.auto()
-	ON_POWER_LOSE = enum.auto()
-	VS_POWER_LOSE = enum.auto()
-	ON_TURN = enum.auto()
-	ON_PLAY = enum.auto()
-	ON_HP_REDUCE = enum.auto()
-	VS_HP_REDUCE = enum.auto()
-	AFTER_ATTACK = enum.auto()
-	AFTER_ATTACK_ED = enum.auto()
-	TURN_START = enum.auto()
-	TURN_END = enum.auto()
+	ON_KILL = enum.auto()         # occur when the SOURCE creature performs a kill
+	ON_ATTACK = enum.auto()       # occur when the SOURCE creature performs an attack
+	VS_ATTACK = enum.auto()       # occur when the TARGET creature is attacked (does not require damage to be dealt)
+	ON_SKILL = enum.auto()        # occur when the SOURCE creature performs a skill
+	VS_SKILL = enum.auto()        # occur when the TARGET creature has a skill performed against it
+	ON_POWER_GAIN = enum.auto()   # occur when the SOURCE creature gains powers
+	VS_POWER_GAIN = enum.auto()   # occur when the TARGET creature sees a power gained by SOURCE creature
+	ON_POWER_LOSE = enum.auto()   # occur when the SOURCE creature loses a power
+	VS_POWER_LOSE = enum.auto()   # occur when the TARGET creature sees a power lost by SOURCE creature
+	ON_TURN = enum.auto()         # occurs at the start of SOURCE creature's turn (NO TARGET CREATURE)
+	ON_PLAY = enum.auto()         # occurs when the SOURCE creature performs any play action (NO TARGET, but should use Group/Arena for VS_PLAY
+	ON_HP_REDUCE = enum.auto()    # occurs when the TARGET creature's HP is reduced (thorns/malleable procs)
+	VS_HP_REDUCE = enum.auto()    # occurs when the SOURCE creature deals HP damage to its target
+	TURN_START = enum.auto()      # occurs when the SOURCE creature begins its turns
+	TURN_END = enum.auto()        # occurs when the SOURCE creature ends its turns
+
+affectLookup = {SOURCE.ATTACK: [TRIGGER.ON_ATTACK, TRIGGER.VS_ATTACK, TRIGGER.ON_PLAY],
+				SOURCE.SKILL: [TRIGGER.ON_SKILL, TRIGGER.VS_SKILL, TRIGGER.ON_PLAY],
+				SOURCE.POWER: [TRIGGER.ON_POWER_GAIN, TRIGGER.VS_POWER_GAIN, TRIGGER.ON_PLAY],
+				SOURCE.FX: [TRIGGER.ON_PLAY]}
 
 """
 	FOR INTERNAL USE (THIS FILE) ONLY
@@ -91,15 +90,15 @@ Revision note for powers:
 			# On kill/death
 				# FungiCombust
 			# On/Vs attack/skill/power gain/power lose
-				# Chosen Hex, Awoken Phase 1
+				# Thorns, Chosen Hex, Awoken Phase 1
+			# On HP reduction
+				# Malleable
 			# On turn
 				# Lagavulin, OrbWalker
 			# On play
 				# Giant Head, TimeEater
 			# On/Vs hp reduce
 				# Transient
-			# After attack(ed)
-				# Malleable, Thorns
 
 	ATTRIBUTES:
 		turns : Int (turns to live) or None (permanent)
@@ -302,9 +301,15 @@ def die(value, affectClass, source, target, *extra):
 		# Mark dead in group, handle group death
 		if target.Friendlies is not None:
 			target.Friendlies.fight_on -= 1
-		# Trigger any on-death effects
+		# Because darkling slimes exist, on death should also kill MOST other powers
+		# but powers should have a (default on) field indicating that they get removed
+		# with the on-death call. any power turning that off should be VERY intentional
+		# about it
+		# Trigger any monster-defined/applied on-death effects
 		triggers = [TRIGGER.ON_DEATH]
 		target.Empower(None, SOURCE.FX, *triggers, source=source, target=target, extras=None)
+		triggers = [TRIGGER.ON_KILL]
+		source.Empower(None, SOURCE.FX, *triggers, source=source, target=target, extras=None)
 def makeDie():
 	return Power(timings=TRIGGER.ON_HP_REDUCE, priority=0, turns=None, callback=die, AffectDescription=DESCRIPTIONS.DEAD)
 
