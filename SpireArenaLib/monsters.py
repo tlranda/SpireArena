@@ -35,7 +35,7 @@ class MonsterMove():
 			monster.Energy -= self.cost
 			self.callback()
 			# Play and class triggers occur
-			monster.Empower(None, SOURCE.FX, *affectLookup[self.affectClass], monster, None, extras=None)
+			monster.Empower(None, SOURCE.FX, *affectLookup[self.affectClass], source=monster, target=None, extras=None)
 		elif settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"{str(monster)} has insufficient energy {monster.Energy} to cast {self.ID} (costs {self.cost})")
 
@@ -277,7 +277,7 @@ class Monster():
 		if targets is None:
 			# The move fails due to no targets
 			if settings.DEBUG.full == settings.ARENA_DEBUG:
-				print(f"Power instance {powers} fails to apply -- NO VALID TARGETS")
+				print(f"Power instance {[str(p) for p in powers]} fails to apply -- NO VALID TARGETS")
 			return [None]
 		enemies = self.Select(ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=True,
 				GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=GroupCheckAlive)
@@ -400,15 +400,17 @@ class Monster():
 					target.Health -= damage
 					dealt[-1] += damage
 					# Now call post damage powers
-					Powers = [[TRIGGER.AFTER_ATTACK],[TRIGGER.AFTER_ATTACK_ED]]
+					Powers = [[],[]]
 					if damage > 0:
 						Powers[0].append(TRIGGER.VS_HP_REDUCE)
 						Powers[1].append(TRIGGER.ON_HP_REDUCE)
 					if target_was_alive and not target.Alive:
 						Powers[0].append(TRIGGER.ON_KILL)
 						Powers[1].append(TRIGGER.ON_DEATH)
-					self.Empower(damage, affectClass, *Powers[0], source=self, target=target, extras=extras)
-					target.Empower(damage, affectClass, *Powers[1], source=self, target=target, extras=extras)
+					if len(Powers[0]) > 0:
+						self.Empower(damage, affectClass, *Powers[0], source=self, target=target, extras=extras)
+					if len(Powers[1]) > 0:
+						target.Empower(damage, affectClass, *Powers[1], source=self, target=target, extras=extras)
 		# Return damage dealt for logging
 		return dealt, targets
 
