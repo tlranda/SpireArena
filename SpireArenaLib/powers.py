@@ -1,4 +1,11 @@
 import enum, settings
+
+"""
+	TODO: Powers need trigger locks to prevent them from re-triggering
+		* On same target (multihit)
+		* On base damage for different targets (aoe)
+"""
+
 """
 	Sources describe where effects come from in case that matters
 	ie: Thorns only respond to attacks
@@ -255,7 +262,7 @@ def BLOCK(value, affectClass, source, target, *extra):
 		Side Effects: Reduce BlockAmount in target by blocked amount
 	"""
 	if settings.DEBUG.full == settings.ARENA_DEBUG:
-		print(f"{str(source)} sends {value}, {str(target)} has {target.Block}")
+		print("\t\t"+f"{str(source)} sends {value}, {str(target)} has {target.Block}")
 	available_block = target.Block
 	blocked_damage = min(value, available_block)
 	value -= blocked_damage
@@ -282,7 +289,7 @@ def BLOCK_LOSS_TURN_START(value, affectClass, source, target, *extra):
 		if power.AffectDescription == DESCRIPTIONS.BARRICADE:
 			barricade = True
 	if settings.DEBUG.full == settings.ARENA_DEBUG:
-		print(f"{str(source)} has {source.Block} at start of turn and {'does not have' if not barricade else 'has'} barricade")
+		print("\t\t"+f"{str(source)} has {source.Block} at start of turn and {'does not have' if not barricade else 'has'} barricade")
 	if not barricade:
 		source.Block = 0
 	return not barricade
@@ -310,6 +317,9 @@ def die(value, affectClass, source, target, *extra):
 		target.Empower(None, SOURCE.FX, *triggers, source=source, target=target, extras=None)
 		triggers = [TRIGGER.ON_KILL]
 		source.Empower(None, SOURCE.FX, *triggers, source=source, target=target, extras=None)
+	elif settings.DEBUG.full == settings.ARENA_DEBUG:
+		print("\t\t"+f"{str(target)} does not die")
+	return value
 def makeDie():
 	return Power(timings=TRIGGER.ON_HP_REDUCE, priority=0, turns=None, callback=die, AffectDescription=DESCRIPTIONS.DEAD)
 

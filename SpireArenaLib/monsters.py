@@ -16,7 +16,7 @@ import settings
 	Given a class, energy cost, callback, and string-able attributes
 """
 class MonsterMove():
-	def __init__(self, affectClass, callback, isStatus=False, description="<No move description provided>", energyCost=1):
+	def __init__(self, affectClass, callback, isStatus=False, description="<No move description provided>", energyCost='X'):
 		self.affectClass = affectClass
 		self.callback = callback
 		self.cost = energyCost
@@ -30,10 +30,12 @@ class MonsterMove():
 	def call(self, monster):
 		"""
 			Spend the required energy if available, then make the callback
+			Entanglement check alongside cost?
 		"""
-		if monster.Energy >= self.cost:
-			monster.Energy -= self.cost
-			self.callback()
+		if (self.cost == 'X' and monster.Energy > 0) or (monster.Energy >= self.cost):
+			paid = self.cost if type(self.cost) is int else monster.Energy
+			monster.Energy -= paid
+			self.callback(paid)
 			# Play and class triggers occur
 			monster.Empower(None, SOURCE.FX, *affectLookup[self.affectClass], source=monster, target=None, extras=None)
 		elif settings.DEBUG.full == settings.ARENA_DEBUG:
@@ -123,6 +125,27 @@ class Monster():
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{self.Name}'s move is not overridden by template class's SpecialIntent()")
 		return moveCall
+
+	def SpecialMoveSet(self, *moveChances):
+		"""
+			No special moves by default, should be list of tuples of (move, chance)
+			Should redefine ALL moves else they will be disabled.
+			Probabilities will be weighted for the sum to equal 1 even if the given ones don't
+		"""
+		if len(moveChances) == 0 and settings.DEBUG.minimal <= settings.ARENA_DEBUG:
+			print(f"{self.Name}'s chances are not overridden by template class's SpecialMoveSet()")
+		else:
+			weight = [0 for _ in self.Pattern]
+			for tup in moveChances:
+				move, chance = tup
+				idx = self.Callbacks.index(move)
+				weight[idx] = chance
+			wsum = sum(weight)
+			if wsum != 1.:
+				weight = [w / wsum for w in weight]
+			if settings.DEBUG.full == settings.ARENA_DEBUG:
+				print(f"{str(self)} adjusts move probabilities from {self.Pattern} to {weight}")
+			self.Pattern = weight
 
 	def makeMoves(self, *move_tuples):
 		n_moves = len(move_tuples)
@@ -219,45 +242,31 @@ class Monster():
 			nlt="\n\t"
 			print(f"Select args:{nlt}{nlt.join([key+':'+str(arg) for key,arg in zip(['ArenaTargets', 'ArenaOnlySelf', 'ArenaIncludeSelf', 'ArenaAll', 'GroupTargets', 'GroupOnlySelf', 'GroupIncludeSelf', 'GroupAll', 'GroupCheckAlive'],[ArenaTargets, ArenaOnlySelf, ArenaIncludeSelf, ArenaAll, GroupTargets, GroupOnlySelf, GroupIncludeSelf, GroupAll, GroupCheckAlive])])}")
 		# Get all the candidate groups
-		arenaGroups = [[val for val in self.Arena.Affect(self.Friendlies, OnlySelf=ArenaOnlySelf, IncludeSelf=ArenaIncludeSelf, All=ArenaAll)] for _ in range(ArenaTargets)]
+		arenaGroups = [val for val in self.Arena.Affect(self.Friendlies, OnlySelf=ArenaOnlySelf, IncludeSelf=ArenaIncludeSelf, All=ArenaAll, Count=ArenaTargets)]
 		if settings.DEBUG.full == settings.ARENA_DEBUG:
-			print(f"Select Candidate Groups = {','.join([', '.join([str(g) for g in ag[1:]]) for ag in arenaGroups])}")
-		if arenaGroups[0][0] == 0:
+			print(f"Select Candidate Groups = {' | '.join([', '.join([str(g) for g in ag]) for ag in arenaGroups[1:]])}")
+		if arenaGroups[0] == 0:
 			# There are no valid targets, return None
 			return None
-		# Determine number of targets to pick
-		maxTargeted = sum([_[0] for _ in arenaGroups])
-		if ArenaTargets is not None:
-			maxTargeted = min(ArenaTargets, maxTargeted)
-		# Make actual groups
-		targetedGroups = []
-		for groupList in arenaGroups:
-			targetedGroups.extend(groupList[1:])
-		if ArenaTargets is not None:
-			# Randomly target groups up to the number of targets
-			targetedGroups = self.rng.choices(targetedGroups, k=ArenaTargets)
-		if settings.DEBUG.full == settings.ARENA_DEBUG:
-			print(f"Selected Groups = {','.join([str(g) for g in targetedGroups])}")
 
 		# Now select group targets in each group
-		monsterGroups = [[val for val in group.Affect(self, GroupOnlySelf, GroupIncludeSelf, GroupAll, GroupCheckAlive)] for group in targetedGroups]
+		monsterGroups = [[val for val in group.Affect(self, GroupOnlySelf, GroupIncludeSelf, GroupAll, GroupCheckAlive, Count=GroupTargets)] for group in arenaGroups[1:]]
+		available_monsters = sum([group[0] for group in monsterGroups])
 		if settings.DEBUG.full == settings.ARENA_DEBUG:
-			print(f"Select Candidate Monsters = {','.join([','.join([str(g) for g in mg[1:]]) for mg in monsterGroups])}")
-		if monsterGroups[0][0] == 0:
+			print(f"Select From {available_monsters} Candidate Monsters = {' | '.join([','.join([str(g) for g in mg[1:]]) for mg in monsterGroups])}")
+		if available_monsters == 0:
 			# There are no valid targets, return None
 			return None
-		# Refine number of targets to pick
-		maxTargeted = sum([_[0] for _ in monsterGroups])
-		if GroupTargets is not None:
-			maxTargeted = min(GroupTargets, maxTargeted)
 		# Make actual targets
 		targetedMonsters = []
 		for monsterList in monsterGroups:
 			targetedMonsters.extend(monsterList[1:])
 		if GroupTargets is not None:
 			# Randomly target monsters across groups up to the number of targets
-			targetedMonsters = self.rng.choices(targetedMonsters, k=GroupTargets)
+			targetedMonsters = self.rng.sample(targetedMonsters, k=min(len(targetedMonsters), GroupTargets))
 		# Return the targeted Monsters
+		if settings.DEBUG.full == settings.ARENA_DEBUG:
+			print(f"Target {len(targetedMonsters)} = {' | '.join([str(m) for m in targetedMonsters])}")
 		return targetedMonsters
 
 	def ApplyPowers(self, *powers, affectClass=SOURCE.SKILL,
@@ -324,9 +333,9 @@ class Monster():
 		applied = []
 		# Iteratively gain block
 		for block in amounts:
-			applied.append(0)
 			if self.Alive:
 				for target in targets:
+					applied.append(0)
 					if empowerBlock:
 						Powers = [[TRIGGER.DEFENSE], [TRIGGER.DEFENSE]]
 						if affectClass == SOURCE.ATTACK:
@@ -374,10 +383,10 @@ class Monster():
 		# Iteratively perform damage
 		dealt = []
 		for damage in amounts:
-			dealt.append(0)
 			# Can stop multiattacks early etc if die during the effect
 			if self.Alive:
 				for target in targets:
+					dealt.append(0)
 					if empowerDamage:
 						Powers = [[TRIGGER.OFFENSE], [TRIGGER.DEFENSE]]
 						if affectClass == SOURCE.ATTACK:

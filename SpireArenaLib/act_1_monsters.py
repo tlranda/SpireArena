@@ -43,9 +43,12 @@ class AcidSlime(monsters.Monster):
 						(powers.SOURCE.ATTACK, self.Tackle, False, f"{str(self)} tackles"),
 						(powers.SOURCE.SKILL, self.Lick, False, f"{str(self)} licks"))
 		if self.Size == 'S':
-			self.Pattern = [0, 0.5, 0.5]
+			self.SpecialMoveSet((self.Tackle, 0.5),
+								(self.Lick, 0.5))
 		else:
-			self.Pattern = [0.3, 0.4, 0.3]
+			self.SpecialMoveSet((self.Corrosive_Spit, 0.3),
+								(self.Tackle, 0.4),
+								(self.Lick, 0.3))
 		# Powers
 		# self.PowerPool = [Power(SPLIT) # at/below half HP splits into 2 Acid Slime (M) with current HP]
 		# Ascend the mortal form
@@ -58,10 +61,14 @@ class AcidSlime(monsters.Monster):
 	def Ascend(self, ascension):
 		if self.ascension < 7 and ascension >= 7:
 			self.MaxHealth += self.AscendMaxHealth
-			self.Pattern = [0.4, 0.3, 0.3]
+			self.SpecialMoveSet((self.Corrosive_Spit, 0.4),
+								(self.Tackle, 0.3),
+								(self.Lick, 0.3))
 		elif self.ascension >= 7 and ascension < 7:
 			self.MaxHealth -= self.AscendMaxHealth
-			self.Pattern = [0.3, 0.4, 0.3]
+			self.SpecialMoveSet((self.Corrosive_Spit, 0.3),
+								(self.Tackle, 0.4),
+								(self.Lick, 0.3))
 
 	def SpecialIntent(self, moveCall, moveAlternatives, moveChances):
 		# Slime cannot use Tackle twice in a row
@@ -86,7 +93,7 @@ class AcidSlime(monsters.Monster):
 				moveCall = self.rng.choices(moveAlternatives, moveChances, k=1)[0]
 		return moveCall
 
-	def Corrosive_Spit(self):
+	def Corrosive_Spit(self, paid):
 		if self.Size == 'L':
 			n_slimed = 2
 			if self.ascension >= 2:
@@ -101,24 +108,24 @@ class AcidSlime(monsters.Monster):
 				damage = 7
 		# Deal damage
 		# Shuffle n_slimed slime statuses into target's discard pile (however that is implemented)
-		dealt, targets = self.Damage(damage)
+		dealt, targets = self.Damage(damage, ArenaTargets=paid, GroupTargets=paid)
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses CORROSIVE_SPIT to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to {[str(monster) for monster in targets]} and shuffle {n_slimed} into {[str(monster) for monster in targets]}'s discard!!")
 
-	def Lick(self):
+	def Lick(self, paid):
 		if self.Size == 'L':
 			weak = 2
 		else: # self.Size == 'M' or 'S':
 			weak = 1
-		# Apply weak to target
+		# Apply weak to targets
 		targets = self.ApplyPowers(powers.makeWeak(weak), affectClass=self.Abilities[self.Callbacks.index(self.Lick)].affectClass,
-						ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
-						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
+						ArenaTargets=paid, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
+						GroupTargets=paid, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses LICK to apply {weak} weak to {[str(monster) for monster in targets]}!!")
 
-	def Tackle(self):
+	def Tackle(self, paid):
 		if self.Size == 'L':
 			if self.ascension >= 2:
 				damage = 18
@@ -135,10 +142,7 @@ class AcidSlime(monsters.Monster):
 			else:
 				damage = 3
 		# Deal damage
-		dealt, targets = self.Damage(damage)
-		# How you would do a multihit:
-		#damages = [damage, damage]
-		#dealt, targets = self.Damage(*damages)
+		dealt, targets = self.Damage(damage, ArenaTargets=paid, GroupTargets=paid)
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses TACKLE to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to {[str(monster) for monster in targets]}!!")
 
@@ -177,11 +181,17 @@ class Slaver(monsters.Monster):
 						(powers.SOURCE.ATTACK, self.Scrape, False, f"{str(self)} scrapes"),
 						(powers.SOURCE.SKILL, self.Entangle, False, f"{str(self)} throws net"))
 		if self.Color == 'Blue':
-			self.Pattern = [0.4, 0.6, 0, 0]
+			self.SpecialMoveSet((self.Stab, 0.4),
+								(self.Rake, 0.6))
 		else:
-			#self.Pattern = [1, 0, 0, 0] first turn
-			self.Pattern = [0.3375, 0, 0.4125, 0.25] #pattern is scrape, scrape, stab until entangle (25% per tern)
-			#self.Pattern = [0.45, 0, 0.55, 0]  after entangle
+			"""
+				Actually forced to STAB first turn
+				Then SCRAPE, SCRAPE, STAB explicitly until 25% chance ENTANGLE triggers
+				Then 45% STAB 55% SCRAPE post-ENTANGLE
+			"""
+			self.SpecialMoveSet((self.Stab, 0.3375),
+								(self.Scrape, 0.4125),
+								(self.Entangle, 0.25))
 		# Powers
 		# self.PowerPool.Append(Power(Entangle)) # stops target from attacking for one turn]
 		# Ascend the mortal form
@@ -201,8 +211,7 @@ class Slaver(monsters.Monster):
 		TBD
 	'''
 
-	def Stab(self):
-		#Does damage to single target
+	def Stab(self, paid):
 		if self.Color == 'Blue':
 			if self.ascension >= 2:
 				damage = 13
@@ -214,33 +223,32 @@ class Slaver(monsters.Monster):
 			else:
 				damage = 13
 		# Deal damage
-		dealt, targets = self.Damage(damage)
+		dealt, targets = self.Damage(damage, ArenaTargets=paid, GroupTargets=paid)
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses Stab to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to {[str(monster) for monster in targets]}!!")
 
-	def Rake(self):
+	def Rake(self, paid):
 		#just for Blue Slaver applys weak and does damage to single target
 		if self.ascension >= 2:
 			damage = 8
 		else:
 			damage = 7
-
 		if self.ascension >= 17:
 			weak = 2
 		else:
 			weak = 1
 
 		# Deal damage
-		dealt, targets = self.Damage(damage)
+		dealt, targets = self.Damage(damage, ArenaTargets=paid, GroupTargets=paid)
 		# Apply weak to target
 		targets = self.ApplyPowers(powers.makeWeak(weak), affectClass=self.Abilities[self.Callbacks.index(self.Rake)].affectClass,
-						ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
-						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
+						ArenaTargets=paid, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
+						GroupTargets=paid, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses Rake to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage and apply {weak} weak to {[str(monster) for monster in targets]}!!")
 
-	def Scrape(self):
+	def Scrape(self, paid):
 		# ONLY RED SLAVER CAN USE Scrape
 		if self.ascension >= 2:
 			damage = 9
@@ -251,17 +259,17 @@ class Slaver(monsters.Monster):
 		else:
 			vulnerable = 1
 		# Deal damage
-		dealt, targets = self.Damage(damage)
+		dealt, targets = self.Damage(damage, ArenaTargets=paid, GroupTargets=paid)
 		#Applies Vulnerable
 		vulnerablePower = powers.Power(timings=powers.TRIGGER.DEFENSE, priority=3, turns=vulnerable, callback=powers.VULNERABLE, AffectDescription=powers.DESCRIPTIONS.VULNERABLE)
 		targets = self.ApplyPowers(vulnerablePower, affectClass=self.Abilities[self.Callbacks.index(self.Scrape)].affectClass,
-						ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
-						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
+						ArenaTargets=paid, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
+						GroupTargets=paid, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses Scrape to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage and apply {vulnerable} vulnerable to {[str(monster) for monster in targets]}!!")
 
-	def Entangle(self):
+	def Entangle(self, paid):
 		# ONLY RED SLAVER CAN USE Entangle
 		# Entangle stops target from using attack next turn
 		entangle = 1
@@ -299,7 +307,9 @@ class JawWorm(monsters.Monster):
 		self.makeMoves((powers.SOURCE.ATTACK, self.Chomp, False, f"{str(self)} chomps"),
 						(powers.SOURCE.ATTACK, self.Thrash, False, f"{str(self)} thrashs"),
 						(powers.SOURCE.POWER, self.Bellow, False, f"{str(self)} bellows"))
-		self.Pattern = [0.25, 0.30, 0.45]
+		self.SpecialMoveSet((self.Chomp, 0.25),
+							(self.Thrash, 0.3),
+							(self.Bellow, 0.45))
 
 		# Ascend the mortal form
 		self.ascension = ascension
@@ -325,26 +335,26 @@ class JawWorm(monsters.Monster):
 			doesnt have to start with chomp
 	'''
 
-	def Chomp(self):
+	def Chomp(self, paid):
 		if self.ascension >= 2:
 			damage = 12
 		else:
 			damage = 11
 		# Deal damage
-		dealt, targets = self.Damage(damage)
+		dealt, targets = self.Damage(damage, ArenaTargets=paid, GroupTargets=paid)
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses Chomp to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you!")
 
-	def Thrash(self):
+	def Thrash(self, paid):
 		damage = 7
 		block = 5
 		# Deal damage and gains block
-		dealt, targets = self.Damage(damage)
-		barrier, targets = self.GainBlock(block)
+		dealt, targets = self.Damage(damage, ArenaTargets=paid, GroupTargets=paid)
+		barrier, targets = self.GainBlock(block, ArenaTargets=paid, GroupTargets=paid)
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses Thrash to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you and gains RAW_INTENT:{block} --> ACTUAL:{barrier} block!")
 
-	def Bellow(self):
+	def Bellow(self, paid):
 		block = 6
 		if self.ascension >= 2 and self.ascension < 17:
 			strength = 4
@@ -355,7 +365,7 @@ class JawWorm(monsters.Monster):
 			strength = 3
 		# Gains strength and block
 		# create or update a strength instance
-		barrier, targets = self.GainBlock(block)
+		barrier, targets = self.GainBlock(block, ArenaTargets=paid, GroupTargets=paid)
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses Bellow to gain {strength} and RAW_INTENT:{block} --> ACTUAL:{barrier} block!")
 
@@ -392,7 +402,8 @@ class Cultist(monsters.Monster):
 		# Moves
 		self.makeMoves((powers.SOURCE.ATTACK, self.Dark_Strike, False, f"{str(self)} stabs"),
 						(powers.SOURCE.POWER, self.Incantation, False, f"{str(self)} performs a ritual"))
-		self.Pattern = [1, 0]
+		# Starts combat with Incantation (SpecialIntent)
+		self.SpecialMoveSet((self.Dark_Strike, 1))
 
 		# Ascend the mortal form
 		self.ascension = ascension
@@ -410,15 +421,15 @@ class Cultist(monsters.Monster):
 	def SpecialIntent(self, moveCall, moveAlternatives, moveChances):
 		TBD
 	'''
-	def Dark_Strike(self):
+	def Dark_Strike(self, paid):
 		#Does damage to single target
 		damage = 6
 		# Deal damage
-		dealt, targets = self.Damage(damage)
+		dealt, targets = self.Damage(damage, ArenaTargets=paid, GroupTargets=paid)
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses Stab to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you!!")
 
-	def Incantation(self):
+	def Incantation(self, paid):
 		#gains strength per tern
 		if self.ascension >= 4 and self.ascension < 17:
 			Ritual = 4
@@ -428,8 +439,8 @@ class Cultist(monsters.Monster):
 			Ritual = 3
 		"""
 		self.ApplyPowers(ritualPower, affectClass=self.Abilities[self.Callbacks.index(self.Incantation)].affectClass,
-						ArenaTargets=1, ArenaOnlySelf=True, ArenaIncludeSelf=True, ArenaAll=False,
-						GroupTargets=1, GroupOnlySelf=True, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
+						ArenaTargets=paid, ArenaOnlySelf=True, ArenaIncludeSelf=True, ArenaAll=False,
+						GroupTargets=paid, GroupOnlySelf=True, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
 						extras=[])
 		"""
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
@@ -462,20 +473,21 @@ class Louse(monsters.Monster):
 		self.Act = 1
 		# Stats
 		self.BaseDamage = self.rng.randint(5,7)
+		self.AscendMaxHealth = 1
 		if self.Color == 'Red':
 			self.MaxHealth = self.rng.randint(10, 15)
-			self.AscendMaxHealth = 1
 		else:
 			self.MaxHealth = self.rng.randint(11, 17)
-			self.AscendMaxHealth = 1
 		# Moves
 		self.makeMoves((powers.SOURCE.ATTACK, self.Bite, False, f"{str(self)} bites"),
 						(powers.SOURCE.SKILL, self.Grow, False, f"{str(self)} gets larger"),
 						(powers.SOURCE.SKILL, self.Spit_Web, False, f"{str(self)} spits web"))
 		if self.Color == 'Red':
-			self.Pattern = [0.75, 0.25, 0]
+			self.SpecialMoveSet((self.Bite, 0.75),
+								(self.Grow, 0.25))
 		else:
-			self.Pattern = [0.75, 0, 0.25]
+			self.SpecialMoveSet((self.Bite, 0.75),
+								(self.Spit_Web, 0.25))
 
 		# Powers
 		# self.PowerPool.append(Power(Curl Up)) # gain block after surviving hp loss
@@ -502,17 +514,17 @@ class Louse(monsters.Monster):
 		def SpecialIntent(self, moveCall, moveAlternatives, moveChances):
 			TBD
 	'''
-	def Bite(self):
+	def Bite(self, paid):
 		#Does damage to single target
 		damage = self.BaseDamage
 		if self.ascension >= 2:
 			damage += 1
 		# Deal damage
-		dealt, targets = self.Damage(damage)
+		dealt, targets = self.Damage(damage, ArenaTargets=paid, GroupTargets=paid)
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses Bite to deal RAW_INTENT:{damage} --> ACTUAL:{dealt} damage to you!!")
 
-	def Grow(self):
+	def Grow(self, paid):
 		# Just for Red Louse
 		if self.ascension >= 17:
 			strength = 4
@@ -522,18 +534,18 @@ class Louse(monsters.Monster):
 		# Apply strength to target
 		strengthPower = powers.Power(timings=powers.TRIGGER.OFFENSE, priority=1, turns=None, callback=powers.STRENGTH, AffectDescription=powers.DESCRIPTIONS.STRENGTH)
 		targets = self.ApplyPowers(strengthPower, affectClass=self.Abilities[self.Callbacks.index(self.Grow)].affectClass,
-						ArenaTargets=1, ArenaOnlySelf=True, ArenaIncludeSelf=True, ArenaAll=False,
-						GroupTargets=1, GroupOnlySelf=True, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
+						ArenaTargets=paid, ArenaOnlySelf=True, ArenaIncludeSelf=True, ArenaAll=False,
+						GroupTargets=paid, GroupOnlySelf=True, GroupIncludeSelf=False, GroupAll=False, GroupCheckAlive=True,
 						extras=[])
 		'''
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses Grow to apply {strength} strength to {[str(monster) for monster in targets]}!!")
 
-	def Spit_Web(self):
+	def Spit_Web(self, paid):
 		weak = 2
 		targets = self.ApplyPowers(powers.makeWeak(weak), affectClass=self.Abilities[self.Callbacks.index(self.Spit_Web)].affectClass,
-						ArenaTargets=1, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
-						GroupTargets=1, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
+						ArenaTargets=paid, ArenaOnlySelf=False, ArenaIncludeSelf=False, ArenaAll=False,
+						GroupTargets=paid, GroupOnlySelf=False, GroupIncludeSelf=False, GroupAll=True, GroupCheckAlive=True,
 						extras=[])
 		if settings.DEBUG.minimal <= settings.ARENA_DEBUG:
 			print(f"{str(self)} uses Spit Web apply {weak} weak to {[str(monster) for monster in targets]}!!")

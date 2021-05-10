@@ -33,6 +33,7 @@ class MonsterGroup():
 		if settings.DEBUG.full == settings.ARENA_DEBUG:
 			print(f"Making{' empty' if monsters == [] else ''} monster group {ID}{' out of '+','.join([str(m) for m in monsters]) if monsters != [] else ''}")
 		self.ID = ID
+		self.rng = settings.global_rng
 		self.setting = setting
 		self.monsters = []
 		self.ephemeral = []
@@ -135,7 +136,7 @@ class MonsterGroup():
 				monster.PowerPool.remove(power)
 
 	# Condition-based generator to look up monsters in the group
-	def Affect(self, SourceMonster, OnlySelf=False, IncludeSelf=False, All=False, CheckAlive=True):
+	def Affect(self, SourceMonster, OnlySelf=False, IncludeSelf=False, All=False, CheckAlive=True, Count=1):
 		if OnlySelf:
 			if SourceMonster in self.monsters:
 				yield 1
@@ -145,6 +146,9 @@ class MonsterGroup():
 				group = [_ for _ in self.monsters if _.Alive]
 			else:
 				group = [_ for _ in self.monsters if _.Alive and _ != SourceMonster]
+			# Permit up to Count choices from the group
+			if Count is not None:
+				group = self.rng.sample(group, k=min(len(group), Count))
 			yield len(group)
 			for monster in group:
 				yield monster
@@ -233,16 +237,16 @@ class Arena():
 			group.Turn()
 		self.turn += 1
 
-	def Affect(self, Friendlies, OnlySelf=False, IncludeSelf=False, All=False):
+	def Affect(self, Friendlies, OnlySelf=False, IncludeSelf=False, All=False, Count=1):
 		if OnlySelf:
 			groups = [_ for _ in self.groups if _ == Friendlies]
 		elif not IncludeSelf:
 			groups = [_ for _ in self.groups if _ != Friendlies]
 		else:
 			groups = dcpy(self.groups)
-		if not All:
-			# Trim to one group
-			groups = self.rng.choices(groups, k=1)
+		if not All and Count is not None:
+			# Trim to desired number of groups (without replacement)
+			groups = self.rng.sample(groups, k=min(len(groups), Count))
 		# Iterate over all affected groups
 		yield len(groups)
 		for group in groups:

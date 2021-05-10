@@ -14,7 +14,7 @@ SAL.settings.global_rng.seed(12345)
 from argparse import ArgumentParser as AP
 def build():
 	prs = AP()
-	testIDs = [0,1,2,3]
+	testIDs = [0,1,2,3,4]
 	prs.add_argument("testID", type=int, choices=testIDs, help=f"Test to perform amongst {testIDs}")
 	prs.add_argument('-debug', default=SAL.settings.reverse_debug_names[SAL.settings.ARENA_DEBUG], choices=list(SAL.settings.debug_names.keys()), help=f"Debug output level (default: {SAL.settings.reverse_debug_names[SAL.settings.ARENA_DEBUG]})")
 	prs.add_argument("-turns", "-max-turns", type=int, default=1, help="Turns to demonstrate (default 1)")
@@ -101,6 +101,19 @@ if __name__ == '__main__':
 		print(f"JawWorm has {jawWorm.Block} block after turn 2")
 		jawWorm.Turn(move)
 		print(f"JawWorm has {jawWorm.Block} block after turn 3")
+	elif test == 4:
+		"""
+			Large multigroup fight for testing AoEs
+		"""
+		n_groups = 4
+		n_monsters = 8
+		n_per = n_monsters // n_groups
+		monster_pool = [SAL.makeMonster(**{'MonsterType': mType, 'ID': f"{mType}{str(uid)}"}) for mType, uid in zip(['AcidSlime'] * n_monsters, range(1,1+n_monsters))]
+		groups = []
+		for gid in range(n_groups):
+			lo, hi = gid * n_per, (gid+1) * n_per
+			groups.append(SAL.MonsterGroup(ID=f"Group{str(gid+1)}", monsters=monster_pool[lo:hi]))
+		field = SAL.Arena(ID='AoE_Arena', groups=groups)
 	else:
 		raise ValueError(f"test has value {test}, valid values are {VALID_VALUES}")
 	demo(field, args.turns)
