@@ -1,4 +1,7 @@
 # SpireArena
+
+# Ceased Development Notice: This version proved troublesome to design, and is no longer actively maintained
+
 Slay The Spire Monster Infighting... Who would win?
 
 STRUCTURE:
